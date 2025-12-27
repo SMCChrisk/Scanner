@@ -1,0 +1,5 @@
+[C:\Projects\Scanner\AppSrc\Amadeus.pkg]
+Source43=Move (ParseAIRHeader(sInputRecord, &AmadeusAIR)) to bSuccess
+ConditionEnabled43=0
+Condition43= 
+43=1

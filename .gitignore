@@ -1,0 +1,117 @@
+# This is a .gitignore file customized for DataFlex projects
+# --- DataFlex Compiled & Intermediate Files ---
+*.p??
+*.dfo
+*.err
+*.prn
+*.map
+*.dep
+
+# --- Executables and Binaries ---
+/Programs/*.exe
+/Programs/*.dll
+/Programs/*.ocx
+/Programs/*.manifest
+/Programs/*.exe.manifest
+
+# --- Data Files (Embedded Database) ---
+# Usually, you want to keep .tag, .fd, and .def files in version control, 
+# but ignore the actual data and indices.
+/Data/*.dat
+/Data/*.vld
+/Data/*.k*
+/Data/*.log
+/Data/*.bak
+
+/Data/*.cch
+/Data/*.bad
+/Data/*.del
+
+# --- IDE and Workspace Settings ---
+# Ignore local workspace settings that vary by developer
+/IdeSrc/*.cfg
+/AppSrc/*.cfg
+*.swp
+*.tmp
+*.bak
+
+# --- Web Application Specifics ---
+/AppHtml/Cache/*
+/AppHtml/Temp/*
+/AppHtml/Upload/*
+
+# --- Windows System Files ---
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# --- Tools and Packages ---
+/Lib/*
+# If using a package manager like DFPM, ignore the packages folder
+/Packages/*
+
+
+# Taken from prior projects
+
+# Log files
+*.log
+
+# Large media files
+*.mp4
+*.tiff
+*.avi
+*.flv
+*.mov
+*.wmv
+*.zip
+
+AppHtml/CssThemes/Df_Flat_Desktop
+AppHtml/CssThemes/Df_Flat_Touch
+AppHtml/CssThemes/Df_High_Contrast
+AppHtml/CssThemes/Df_Material
+AppHtml/CssThemes/Df_Modern_Sky
+AppHtml/CssThemes/Df_Web_Creme
+AppHtml/CssThemes/Df_Windows_Like
+
+#DDSrc
+**/ddsrc/**/*.def
+
+# From DAC
+programs/*.exe
+programs/*.dbg
+programs/*.exe.manifest
+programs/webapp.log
+appsrc/*.dep
+appsrc/*.fld
+appsrc/*.pbg
+appsrc/*.pdp
+appsrc/*.pkd
+appsrc/*.prp
+appsrc/*.err
+data/*.cch
+ddsrc/*.bak
+idesrc/studiometadata.mtd
+IdeSrc/StudioMetaData64.mtd
+idesrc/workspace.loc
+
+
+# My own
+#data/DFconnid.ini
+data/Mertech.ini
+*.cgk
+*.old
+Data/*tempfile.int
+Reports/*.csv
+Reports/*.xls*
+Reports/*.txt
+Reports/*.dat
+Reports/*.pdf
+Reports/*.hot
+Reports/*.tst
+Data/*.tmp
+Data/*.RPT
+AppHtml/DataFlexReports/CssThemes/
+AppHtml/DataFlexReports/Fonts/
+*.manifest
+Data/*.hdr
+RawData/

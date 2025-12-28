@@ -1,6 +1,6 @@
 # This is a .gitignore file customized for DataFlex projects
 # --- DataFlex Compiled & Intermediate Files ---
-*.p??
+#*.p??
 *.dfo
 *.err
 *.prn
@@ -115,3 +115,5 @@ AppHtml/DataFlexReports/Fonts/
 *.manifest
 Data/*.hdr
 RawData/
+AppHtml/DataFlexReports/Images/
+Doc/

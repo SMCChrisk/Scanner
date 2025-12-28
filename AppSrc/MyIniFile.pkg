@@ -1,0 +1,132 @@
+﻿// Objects, functions, processes needed to handle the INI file for ATG EQX
+// Use cSettingsDataDictionary.dd
+
+Use cIniFile.pkg
+
+//Object oEQX_ini is a cIniFile
+//
+//    Function IniFileExists String sSection String sKey Returns Boolean
+//        Boolean bExists
+//        String sDataPath
+//
+//        Get psDataPath of (phoWorkspace(ghoApplication)) to sDataPath
+//        Get PathAtIndex of (phoWorkspace(ghoApplication)) sDataPath 1 to sDataPath // Strip to just the first path if multiple
+//        Set psFileName to (sDataPath + "\EQX.INI")
+//        Get KeyExists sSection sKey to bExists
+//        Function_Return (bExists)
+//    End_Function
+//
+////    Function ReadEmailSubject Returns String
+////        Boolean bExists
+////        String sRtnVal
+////
+////        Get IniFileExists "EmailQuote" "Subject" to bExists
+////        If (bExists) Begin
+////            Get ReadString "EmailQuote" "Subject" "Please review the attached ASL Interpreter Agreement from CITE ASL" to sRtnVal
+////        End
+////        Else Begin
+////            Send WriteString "EmailQuote" "Subject" "Please review the attached ASL Interpreter Agreement from CITE ASL"
+////            Move "Please review the attached ASL Interpreter Agreement from CITE ASL" to sRtnVal
+////        End
+////        Function_Return (sRtnVal)
+////    End_Function
+//
+////    Procedure WriteEmailSubject String sSubject
+//////            String sDataPath sRtnVal
+////    
+//////            Get psDataPath of (phoWorkspace(ghoApplication)) to sDataPath        
+//////            Set psFileName to (sDataPath + "\EQX.INI")
+////        Send WriteString "EmailQuote" "Subject" sSubject
+////    End_Procedure
+//
+//    Function ReadIni String sSection String sKey String sDefault Returns String
+//        Boolean bExists
+//        String sRtnVal
+//
+//        Get IniFileExists sSection sKey to bExists
+//        If (bExists) Begin
+//            Get ReadString sSection sKey sDefault to sRtnVal
+//        End
+//        Else Begin
+//            Send WriteString sSection sKey sDefault
+//            Move sDefault to sRtnVal
+//        End
+//        Function_Return (sRtnVal)
+//    End_Function
+//
+//    Procedure WriteIni String sSection String sKey String sDefault
+//        Send WriteString sSection sKey sDefault
+//    End_Procedure
+//
+//End_Object
+//
+//Object oEQX_Settings is a cObject
+//
+////    Object Setting_DD is a cSettingsDataDictionary
+////    End_Object
+//
+//    Function LocateSettings String sUserId String sScope String sSection String sKey Returns Boolean
+//        Boolean bFound
+//        
+//        Open SETTINGS
+//        Clear Settings
+//        Move sUserId  to Settings.UserId
+//        Move sScope   to Settings.Scope
+//        Move sSection to Settings.Section
+//        Move sKey     to Settings.KeyField
+//        Find eq Settings by Index.1 // UserId, Scope, Section, Key
+//        If (not(Found)) Begin // Look to see if there is a 'global' or 'wildcard' setting in the table
+//            Clear Settings
+//            Move '*'      to Settings.UserId
+//            Move sScope   to Settings.Scope
+//            Move sSection to Settings.Section
+//            Move sKey     to Settings.KeyField
+//            Find eq Settings by Index.1 // UserId, Scope, Section, Key
+//            If (not(Found)) Begin
+//                Clear Settings
+//                Move sUserId  to Settings.UserId
+//                Move '*'      to Settings.Scope
+//                Move sSection to Settings.Section
+//                Move sKey     to Settings.KeyField
+//                Find eq Settings by Index.1 // UserId, Scope, Section, Key
+//            End
+//        End
+//        Function_Return (Found)
+//    End_Function
+//
+//    Function ReadSettings1 String sUserId String sScope String sSection String sKey String sDefaultValue Returns String
+//        If (LocateSettings(Self, sUserId, sScope, sSection, sKey)) ;
+//            Function_Return (Settings.Value1)
+//        Else ;
+//            Function_Return (sDefaultValue)
+//    End_Function
+//
+//    Function ReadSettings2 String sUserId String sScope String sSection String sKey String sDefaultValue Returns String
+//        If (LocateSettings(Self, sUserId, sScope, sSection, sKey)) ;
+//            Function_Return (Settings.Value2)
+//        Else ; // We may want to also put this default value into SETTINGS here since we didn't have one
+//            Function_Return (sDefaultValue)
+//    End_Function
+//    
+//    Procedure WriteSettings String sUserId String sScope String sSection String sKey String sValue1 String sValue2
+//        Open SETTINGS
+//        If (Trim(sUserId) = '') ;
+//            Move '*' to sUserId
+//        If (Trim(sScope) = '') ;
+//            Move '*' to sScope
+//
+//        Lock
+//        Clear Settings
+//        Move sUserId  to Settings.UserId
+//        Move sScope   to Settings.Scope
+//        Move sSection to Settings.Section
+//        Move sKey     to Settings.KeyField
+//        Find eq Settings by Index.1 // UserId, Scope, Section, KeyField
+//        Move sValue1 to Settings.Value1
+//        Move sValue2 to Settings.Value2
+//        SaveRecord Settings
+//        Unlock
+//    End_Procedure
+//
+//End_Object
+

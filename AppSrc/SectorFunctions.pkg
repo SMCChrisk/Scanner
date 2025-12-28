@@ -1,0 +1,2028 @@
+﻿// General functions
+// Sector Micro Computer / CodeAterium (c) 1990 - 2021
+
+// 11/13/2023 Creation. Taken from Longo Sector functions
+
+//Use mertech.inc
+
+//Struct tGLAccount
+//    Integer iAcct
+//    Number nAmt
+//End_Struct
+
+// Dataflex tools and tips: https://www.frankcheng.com/vdf/
+
+// Global functions
+
+Use MyIniFile.pkg // After globals are declared
+Use cBaseErrorHandler.pkg
+
+//Use MonthCalendarPrompt.dg
+
+// ********************************************************
+// Function Name: RemovePathFromFile
+// Returns: String
+// Purpose: This function will remove the directory path from
+// the filename and return just the filename.
+// ********************************************************
+Function RemovePathFromFile Global String sFullName Returns String
+    Integer iCharLoc iStrLength
+    String sRetVal
+
+    Move sFullName to sRetVal
+
+    While (not((Pos("\", sRetVal)) = 0))
+        Move (Pos("\", sRetVal)) to iCharLoc
+        Move (Length(sRetVal)) to iStrLength
+        Move (Right(sRetVal,(iStrLength - iCharLoc))) to sRetVal
+    Loop
+
+    Function_Return sRetVal
+End_Function
+
+// ********************************************************
+// Function Name: RemoveExtensionFromFile
+// Returns: String
+// Purpose: This function will remove the extension from
+// the filename and return just the filename.
+// ********************************************************
+Function RemoveExtensionFromFile Global String sFileName Returns String
+    Integer iCharLoc iStrLength
+    String sRetVal
+
+    Move sFileName to sRetVal
+    Move (Pos(".", sRetVal)) to iCharLoc
+
+    If (iCharLoc > 0) Begin
+        Move (Length(sRetVal)) to iStrLength
+        Move (Left(sRetVal,(iCharLoc - 1))) to sRetVal  // omit the period
+    End
+
+    Function_Return sRetVal
+End_Function
+
+Function Trim_Single_Char Global String sInput Returns String
+    // Trims a single character to empty string to overcome poor SQL default of single space on varchar fields
+    String sRtnStr
+
+    If (sInput = ' ') Move '' to sRtnStr
+    Else              Move sInput to sRtnStr
+    Function_Return sRtnStr    
+End_Function
+
+Function decimal_round Global Real input_number Integer decimal_places Returns Real
+  Real  dr_num  dr_num1
+  Integer dr_int1
+  If (decimal_places = 0) ;
+    Move  1.0 to dr_num1
+  Else ;
+    Move 10.0 to dr_num1
+  For dr_int1 from 2 to decimal_places // Simulate 10 to the decimal_places power
+      Move (10.0 * dr_num1) to dr_num1
+      Loop
+  If (input_number = 0.0) ;
+      Move 0.0 to dr_num // Check for 0.0 number to be rounded
+  Else ;
+      Move (ROUND(input_number * dr_num1) / dr_num1) to dr_num
+  Function_Return (dr_num)
+End_Function
+
+Function decimal_pad Global String input_string Returns String
+  String sTemp
+  Move (trim(input_string)) to sTemp
+  Move (Pos(".", sTemp)) to StrMark
+  If (StrMark <> 0) Begin // Found a period
+       While (length(sTemp) < (StrMark + 2))
+           Move (sTemp + '0') to sTemp
+       End
+  End
+  Else Move (sTemp + ".00") to sTemp
+  If ((left(sTemp, 1)) = '.') ;
+      Move (Insert('0', sTemp, 1)) to sTemp // Leading 0 on < 1.00
+  Function_Return (sTemp)
+End_Function
+
+Function comma_pad Global String input_string Returns String
+  String lsWork lsDecimal lsSign
+  Integer liLength
+  Move '' to lsDecimal
+  Move '' to lsSign
+  Move (trim(input_string)) to lsWork
+  Move (POS('.', lsWork)) to StrMark
+  If (Found) Begin // Found a period
+     Move (mid(lsWork, 99, STRMARK)) to lsDecimal // Copy off decimal part
+     Move (left(lsWork, STRMARK - 1)) to lsWork   // Whole number portion
+     End
+  If (left(lsWork, 1) = '-') Begin
+     Move '-' to lsSign
+     Move (mid(lsWork, 20, 2)) to lsWork // Strip off sign
+     End
+  Move (length(lsWork)) to liLength
+  If      (liLength = 4) Move (insert(',', lsWork, 2)) to lsWork
+  Else If (liLength = 5) Move (insert(',', lsWork, 3)) to lsWork
+  Else If (liLength = 6) Move (insert(',', lsWork, 4)) to lsWork
+  Else If (liLength = 7) Begin
+    Move (insert(',', lsWork, 5)) to lsWork
+    Move (insert(',', lsWork, 2)) to lsWork
+    End
+  Else If (liLength = 8) Begin
+    Move (insert(',', lsWork, 6)) to lsWork
+    Move (insert(',', lsWork, 3)) to lsWork
+    End
+  Else If (liLength = 9) Begin
+    Move (insert(',', lsWork, 7)) to lsWork
+    Move (insert(',', lsWork, 4)) to lsWork
+    End
+  Else If (liLength = 10) Begin
+    Move (insert(',', lsWork, 8)) to lsWork
+    Move (insert(',', lsWork, 5)) to lsWork
+    Move (insert(',', lsWork, 2)) to lsWork
+    End
+  Else If (liLength = 11) Begin
+    Move (insert(',', lsWork, 9)) to lsWork
+    Move (insert(',', lsWork, 6)) to lsWork
+    Move (insert(',', lsWork, 3)) to lsWork
+    End
+  Move (String(lsSign) + String(lsWork) + String(lsDecimal)) to lsWork // Add back sign and decimal if any
+  Function_Return (lsWork)
+End_Function
+
+Function Is_Number Global String sInput Returns Boolean
+    Integer iPtr
+    Boolean bRtnVal
+    
+    Move True to bRtnVal // Assumed true to start
+    for iPtr from 1 to (Length(sInput))
+        If (bRtnVal) ;
+            Move ("0123456789.-" contains Mid(sInput, 1, iPtr)) to bRtnVal
+    Loop
+    Function_Return bRtnVal
+End_Function
+
+Function Is_Integer Global String sInput Returns Boolean
+    Integer iPtr
+    Boolean bRtnVal
+    
+    Move True to bRtnVal // Assumed true to start
+    For iPtr from 1 to (Length(sInput))
+        If (bRtnVal) ;
+            Move ("0123456789" contains Mid(sInput, 1, iPtr)) to bRtnVal
+    Loop
+    Function_Return bRtnVal
+End_Function
+
+Function Comma_Append Global String sStr1 String sStr2 Returns String
+    // Append to !1 each parameter separated by commas with a space
+    String sRtnVal
+    If (Trim(sStr1) <> '') Begin
+        If (Trim(sStr2) <> '') Move (Trim(sStr1) + ', ' + Trim(sStr2)) to sRtnVal
+        Else Move (Trim(sStr1)) to sRtnVal // Only the first string had a value so no comma
+    End
+    Else Move (Trim(sStr2)) to sRtnVal // s1 is blank so just s2, blank or not
+    Function_Return sRtnVal
+End_Function
+
+Function Lpad Global String in_str Integer iLen Returns String
+    String sTemp
+
+    Move (Trim(in_str)) to sTemp // Right and Left trim first
+    While (Length(sTemp) < iLen)
+        Move (Insert(' ', sTemp, 1)) to sTemp // Insert blanks until it is the correct length
+    Loop
+    Function_Return (sTemp)
+End_Function
+
+Function Lpad_With Global String in_str Integer iLen String sChar Returns String
+    String sTemp
+
+    Move (Trim(in_str)) to sTemp // Right and Left trim first
+    While (Length(sTemp) < iLen)
+        Move (Insert(sChar, sTemp, 1)) to sTemp // Insert sChar(s) until it is the correct length
+    Loop
+    Function_Return (sTemp)
+End_Function
+
+Function MakeAddress Global String sCity String sState String sZip Returns String
+    String sTemp
+    
+    Move (Trim(sCity)) to sTemp
+    If (sTemp <> '') Append sTemp ", "
+    Append sTemp (Trim(sState))
+    If (Trim(sZip) <> '') Append sTemp "  "
+    Append sTemp (Trim(sZip))
+    Function_Return (sTemp)
+End_Function
+
+Function Cdisplay Global String sSrc Integer iLength Returns String
+    // Return the sSrc padded on the left to center it in the give iLength
+    Function_Return (pad(' ', (iLength / 2) - (length(trim(sSrc)) / 2)) + String(sSrc))
+End_Function
+
+Function DateToYYYYMMDD Global Date dInput Returns String
+    String sInput
+    Move (String(dInput)) to sInput
+    If (Trim(sInput) = '') ;
+        Function_Return ''
+    Else ;
+        Function_Return (String(Right(String(dInput), 4) + '-' + Left(String(dInput), 2) + '-' + Mid(String(dInput), 2, 4)))
+End_Function
+
+Function Qualified_Database_Name Global Integer iFile Returns String
+    String sDBName sDBOwner sDBTable
+
+//    Get_Attribute DF_FILE_DATABASENAME of iFile to sDBName // Was used in the Mertech version
+//    Get_Attribute DF_FILE_PHYSICAL_NAME of iFile to sDBName // Not clear is we should use logical or physical name here
+//    Get_Attribute DF_FILE_OWNER        of iFile to sDBOwner
+    Get_Attribute DF_FILE_LOGICAL_NAME of iFile to sDBTable
+//    Function_Return (sDBName - '.' - sDBOwner - '.[' - sDBTable - ']')
+    Function_Return ('.' - sDBOwner - '.[' - sDBTable - ']') // Uses the format .dbo.TABLENAME until we can work out the proper database name in DF2022
+End_Function
+
+Function Convert_Match_To_Like Global String psMatchStr Returns String
+  String lsSqlStr
+
+  Move psMatchStr to lsSqlStr
+  Move (Replaces('*', lsSqlStr, '%')) to lsSqlStr
+  Move (Replaces('?', lsSqlStr, '_')) to lsSqlStr
+  Function_Return (lsSqlStr)
+End_Function
+
+Function Compute_Begin_Of_Match Global String ps_match Returns String
+  String ls_temp
+  Move ps_match to ls_temp
+  Move (Replaces('*', ls_temp, ' ')) to ls_temp
+  Move (Replaces('?', ls_temp, ' ')) to ls_temp
+  Function_Return (ls_temp)
+End_Function
+
+Function Compute_End_Of_Match Global String ps_match Returns String
+  String ls_temp
+  Move ps_match to ls_temp
+  Move (Replaces('*', ls_temp, 'z')) to ls_temp
+  Move (Replaces('?', ls_temp, 'z')) to ls_temp
+  Function_Return (ls_temp)
+End_Function
+
+Function Temp_Folder_Name Global Returns String
+    String sDataPath
+
+    Get_Environment "TEMP" to sDataPath // Local windows temp folder
+    If (Right(sDataPath, 1) <> Sysconf(SYSCONF_DIR_SEPARATOR)) Begin
+        Move (sDataPath - Sysconf(SYSCONF_DIR_SEPARATOR)) to sDataPath
+    End
+    Function_Return (sDataPath)
+End_Procedure
+
+//Declare_Datafile MISCFLDS
+//Function Get_Report_Default Global String sRptName String sVarName Returns String
+//  String sRtnVal
+//  // Non-alpha standard index usage
+//  Open MISCFLDS
+//  Clear MISCFLDS
+//  Move sRptName to MISCFLDS.REFERENCE#
+//  Move (mid(sVarName,10,01)) to MISCFLDS.VAR_NAME
+//  Move (mid(sVarName,02,11)) to MISCFLDS.VAR_COUNT // Overlap field in original
+//  Move "01/01/1980" to MISCFLDS.VAR_DATE
+//  Find EQ MISCFLDS by Index.1
+//  Move (TRIM(MISCFLDS.VAR_DATA)) to sRtnVal
+//  Function_Return (sRtnVal)
+//End_Function
+//
+//Procedure Put_Report_Default Global String sRptName String sVarName String sVarData
+//  // Non-alpha standard index usage
+//  Open MISCFLDS
+//  Clear MISCFLDS
+//  Move sRptName to MISCFLDS.REFERENCE#
+//  Move (mid(sVarName,10,01)) to MISCFLDS.VAR_NAME
+//  Move (mid(sVarName,02,11)) to MISCFLDS.VAR_COUNT // Overlap field in original
+//  Move "01/01/1980" to MISCFLDS.VAR_DATE
+//  Find EQ MISCFLDS by Index.1
+//  Move sVarData to MISCFLDS.VAR_DATA
+//  SaveRecord MISCFLDS
+//End_Procedure
+
+Function RemoveFile Global String sFullName Returns String
+    Integer iCharLoc iStrLength
+    String sRetVal sTemp
+
+    Move sFullName to sRetVal
+    Move "" to sTemp
+    While (not((Pos("\", sRetVal)) = 0))
+        Move (Pos("\", sRetVal)) to iCharLoc
+        Move (Length(sRetVal)) to iStrLength
+        Move (sTemp + (Left(sRetVal,iCharLoc))) to sTemp
+        Move (right(sRetVal,(iStrLength - iCharLoc))) to sRetVal
+    Loop
+    Move sTemp to sRetVal
+    Function_Return sRetVal
+End_Function
+
+Function RemovePath Global String sFullName Returns String
+    String sTemp
+    Move (Mid(sFullName, 20, (length(RemoveFile(sFullName)) + 1))) to sTemp
+    Function_Return sTemp
+End_Function
+
+Function ConvertUtfToOemFile Global String sInputFile String sOutputFile Returns Boolean
+    Integer iChannel
+    UChar[] uaInputFileData
+    String sFileData
+
+    Move (Seq_New_Channel()) to iChannel // Obtain next available channel
+    Direct_Input channel iChannel sInputFile
+    Read_Block uaInputFileData (-1) // Read entire file into this UChar array
+    Close_Input channel iChannel
+
+    Direct_Output channel iChannel sOutputFile
+    Move (UCharArrayToString(uaInputFileData)) to sFileData // Convert to a string
+    Write (Utf8ToOem(sFileData)) // Output this as an OEM string. This should leave OEM line draw characters intact
+    Close_Output channel iChannel
+    Send Seq_Release_Channel iChannel // Relase this channel
+    Function_Return (1)
+End_Function
+
+Function FileExistsAndNonZero Global String sFileName Returns Boolean
+    Integer iBytes iChannel
+    If (Trim(sFileName) <> '') Begin
+        Get_Current_Input_Channel to iChannel
+//        If (iChannel <> 0) Begin
+//            // We have seen the current iChannel as '2' when we always expect it to be '0'
+//            // Unable to determine where this gets set but appears to be in report output to notepad (ex RPT15402)
+//            If ("CHRIS" contains trim(gsUser_id)) ;
+//                Send Info_Box ("Warning:  Input channel" * String(iChannel) * "unexpected."  + Character(13) + "Please report this to Chris Kanieski noting what steps you just made")
+//        End
+        Move (Seq_New_Channel()) to iChannel // Obtain next available channel
+        Direct_Input channel iChannel sFileName
+        If (SeqEof) ;
+            Move 0 to iBytes
+        Else ;
+            Get_Channel_Size iChannel to iBytes
+        Close_Input channel iChannel
+        Send Seq_Release_Channel iChannel // Relase this channel (but does not reset the default for input
+//        Get_Current_Input_Channel to iChannel  debugging
+        Direct_Input channel 0 // Reset the default channel manually
+        Close_Input channel 0
+    End
+    Function_Return (iBytes <> 0)
+End_Function
+
+Procedure Parse_By_Char Global String sHost String sChar String ByRef sToken String ByRef sRemainder
+    Integer iPos iLen
+    String sWork
+
+    Move sHost to sWork
+    Move (length(sWork)) to iLen
+    Move (Pos(sChar, sWork)) to iPos
+    If (iPos > 0) Begin
+        Move (Right(sWork, (iLen - iPos))) to sRemainder
+        Move (left(sWork, (iPos - 1))) to sToken
+    End
+End_Procedure
+
+Function Strip_Title_Paxname Global String pax_name Returns String
+  String old_name  new_name  title
+  String remainder 
+  Move (trim(PAX_NAME)) to old_name
+  If ((right(old_name, 4)) EQ " CHD") Begin
+     // Looks like the CHD is on the end so remove it
+     Move (left(old_name, (length(old_name) - 4))) to old_name
+     End
+
+  Move (Replaces('.', old_name, '')) to old_name
+
+  // Test for 2 character titles
+  Move (RIGHT(old_name, 3)) to remainder
+  If ("|" + remainder + "|") IN "| MR| MS| DR|" Begin
+     Move (left(old_name, (length(old_name) - 3))) to old_name
+     Move (TRIM(remainder)) to title
+     End
+
+  // Test for 3 character titles
+  If title EQ "" Begin
+    Move (RIGHT(old_name, 4)) to remainder
+    If ("|" + remainder + "|") EQ "| MRS|" Begin
+       Move (left(old_name, (length(old_name) - 4))) to old_name
+       Move (TRIM(remainder)) to title
+       End
+    End
+
+  // Test for 4 character titles
+  If title EQ "" Begin
+    Move (RIGHT(old_name, 5)) to remainder
+    If ("|" + remainder + "|") EQ "| MSTR| MISS|" Begin
+       Move (left(old_name, (length(old_name) - 5))) to old_name
+       Move (TRIM(remainder)) to title
+       End
+    End
+
+  Function_Return (old_name)
+End_Function
+
+
+
+
+//Function Mertech_Date Global String sInput Returns Date
+//    Date dRtnVal
+//
+//    Move '' to dRtnVal
+//    If (IsDateValid(sInput)) Begin
+//        Move (Date(sInput)) to dRtnVal
+//        If (dRtnVal <= '1/1/1753') Move '' to dRtnVal
+//    End
+//    Function_Return dRtnVal
+//End_Function
+
+
+// SQL processing as converted from Mertech to native DF SQL
+//Declare_Datafile TCTRIPS
+//Procedure Execute_Native_SQL String[][] ByRef sResultSet String sSQLQuery
+//    String[][] BlankSet
+//    Handle hoStmt
+//    Handle hoConnect
+//    Integer iPtr
+//    tConnection Connect
+//    
+//    Move BlankSet to sResultSet // Clear initial data set
+////    Get SQLConnectionByTable of ghoConnection USER.File_Number to hoConnect
+////    Get SQLConnectionByTable of ghoConnection WebAppUser.File_Number to hoConnect
+//    Get SQLConnectionByTable of ghoConnection TCTRIPS.File_Number to hoConnect
+////    Get SQLConnectionId of ghoConnection "ATGPNRDB_LIVE" to hoConnect  // An alternate way to do this
+//    Get SQLOpen of hoConnect to hoStmt
+//    Send SQLExecDirect of hoStmt sSQLQuery
+//    Get SQLFetchResultsetValues of hoStmt to sResultSet
+//    Send SQLClose of hoStmt
+//    Send SQLDisconnect of hoConnect
+//End_Procedure
+
+Function Check_Stop_Process Global Returns Boolean
+    Boolean bStopIt
+    Get Check_StatusPanel of ghoStatusPanel to bStopIt  // check for user interrupt (cancel button)
+    If (bStopIt) Begin
+        // if we are to display a warning we must first shut off the status panel.
+        Send Stop_StatusPanel of ghoStatusPanel
+        Get Confirm "Continue Process" to bStopIt
+        // if we did not stop the process we must restart the status panel
+        If not (bStopIt) ;
+            Send Start_StatusPanel of ghoStatusPanel
+    End
+    Function_Return (bStopIt)
+End_Function
+
+
+// See Get_File_Path command
+//Function Locate_In_DfPath Global String sFileName Returns String // Empty return if not found
+//    Boolean bExists
+//    String sPath sDfPath sReturn
+//    Handle hoWorkspace
+//    Integer iPathCount iPtr
+//    
+//    Move '' to sReturn // Start with no file located
+//    File_Exist sFileName bExists // Default DF command which only searches current directory
+//    If (bExists) Begin
+//        Move sFileName to sReturn // It was found 'as is'
+//    End
+//    Else Begin
+//        // If not found, search the traditional DFPATH or workspace
+//        Move (RemovePath(sFileName)) to sFileName // Strip preceeding path if needed
+//        Get phoWorkspace of ghoApplication to hoWorkspace
+//        Get psDfPath of hoWorkspace to sDfPath
+//        Move (CountOfPaths(hoWorkspace, sDfPath)) to iPathCount
+//        For iPtr from 1 to iPathCount
+//            Move (PathAtIndex(hoWorkspace, sDfPath, iPtr)) to sPath
+//            If (Right(sPath, 1) <> Sysconf(SYSCONF_DIR_SEPARATOR)) ; // Append '/' if needed
+//                Move (sPath - Sysconf(SYSCONF_DIR_SEPARATOR)) to sPath
+//            File_Exist (sPath - sFileName) bExists
+//            If (bExists) Begin
+//                Move 999 to iPtr // Exit loop
+//                Move (sPath - sFileName) to sReturn
+//            End
+//        Loop
+//    End
+//    Function_Return sReturn
+//End_Function
+
+//#COMMAND EXIST?
+//  Begin
+//    indicate Return_affirmative True
+//    Direct_Input !1
+//    [SeqEof] indicate Return_affirmative False
+//    Close_Input
+//    End
+//  #ENDCOMMAND
+
+//Function get_user_directory  Global  Returns String
+//  String user_directory 
+//  String temp_user_directory
+//  Get_Environment "DFPATH" to temp_user_directory
+//  Append temp_user_directory ';'
+//  Parse temp_user_directory by ";" to user_directory temp_user_directory
+//  If (right(user_directory, 1)) NE "\" Append user_directory "\"
+//  Exist? (String(user_directory) + "DYNAMIC1.DAT")
+//  [not Return_affirmative] Move "" to user_directory
+//  Function_Return (user_directory)
+//End_Function
+
+//Procedure Launch_Edit1 String sTitle Integer iWidth
+//    // Launch the custom Edit1 program with optional title and width settings
+//    // Must use double quotes to surround the title
+//    // Must include empty title if you have a width
+//    If (Trim(sTitle) = '' and iWidth <= 0) ; // No parameters passed
+//        Runprogram Wait 'Edit1'
+//    Else ;
+//        Runprogram Wait ('edit1 "' * String(sTitle) + '"' * String(iWidth))
+//End_Procedure
+
+//Use UserLogin.dg
+//Function User_Program_Security Global String sProgram Returns Boolean
+//    Boolean bRtnVal
+//    Handle hoStatusBar
+//    
+//    Open USER
+//    Open PROGRAM
+//    Open SCRTYTBL
+//    
+//    If (trim(gsUser_id) = '') Begin
+//        Send Activate of oUserLogin
+//        Move (trim(USER.ID)) to gsUser_id
+//    End
+//    Else Begin // Have a User id, find by this
+//        Move gsUser_id to USER.ID
+//        Find EQ USER by Index.1 // ID unique
+//    End // Else
+//    If STATUS USER Begin
+//        Move (Trim(USER.ID)) to gsUser_id
+//        Move USER.INITIALS   to gsUser_initials
+//        Move (uppercase(USER.MANAGER) = 'Y') to gbManagerOverride
+//    End
+//    Else Begin
+//        Send UserError ("User" * Trim(gsUser_id) * "not found") "Operator Error"
+//    End
+//    Clear SCRTYTBL
+//    Clear PROGRAM
+//    Move sProgram to PROGRAM.NAME
+//    Find EQ PROGRAM by Index.1
+//    If PROGRAM.Class NE "" Move PROGRAM.Class to SCRTYTBL.PROGRAM_CLASS
+//    Else                   Move "DEFAULT"     to SCRTYTBL.PROGRAM_CLASS
+//    If USER.Class NE "" Move USER.Class to SCRTYTBL.USER_CLASS
+//    Else                Move "DEFAULT"  to SCRTYTBL.USER_CLASS
+//    Find EQ SCRTYTBL by Index.1
+//    If (Found) Begin
+//        Move (SCRTYTBL.READ_ONLY = 'Y') to gbRead_only_access
+//        Move (SCRTYTBL.MODIFY    = 'Y') to gbModify_access
+//        Move (SCRTYTBL.Add       = 'Y') to gbAdd_access
+//        Move (SCRTYTBL.Delete    = 'Y') to gbDelete_access
+//    End
+//    Else Begin
+//        Move False to gbRead_only_access
+//        Move False to gbModify_access
+//        Move False to gbAdd_access
+//        Move False to gbDelete_access
+//      End
+//
+//    // Now test if we can proceed
+//    If not (gbRead_only_access) Begin
+//        Send UserError "ERROR: INSUFICIENT SECURITY TO ENTER" "Operator Error"
+//        Move True to bRtnVal
+//    End
+////    Else Begin
+////      If (not(gbModify_access) and not(gbAdd_access) and not(gbDelete_access)) Begin
+////        COLOR SCREENEND 68 Disp_help_bold " Read Only "
+////        End
+////      End
+////    End
+//
+//    Get Statusbar_Id to hoStatusBar 
+//    Send DoDisplayUser to hoStatusBar USER.ID
+//
+//    Function_Return (bRtnVal) // True is an error condition
+//End_Function
+
+
+//Function GL_Date_Test Global Date dTestDate Returns Boolean
+//    Boolean bRtnVal
+//    Date dToday
+//    
+//    Open GLPERIOD
+//    Move (CurrentDateTime()) to dToday
+//    Clear GLPERIOD
+//    Move dTestDate to GLPERIOD.END_DATE
+//    Find GE GLPERIOD by Index.2 // Find out what period this was in
+//    Move (not (dTestDate > GLPERIOD.END_DATE)) to Found
+//    If not (Found) Begin
+//        Move False to bRtnVal // Invalid if there is no period table record
+//    End
+//    Else Begin
+//        If (gbManagerOverride) Move (not (dToday > GLPERIOD.HARD_CLOSE)) to bRtnVal
+//        Else                   Move (not (dToday > GLPERIOD.SOFT_CLOSE)) to bRtnVal
+//    End
+//    Function_Return (bRtnVal)
+//End_Function
+
+
+//Function get_next_unique_key Global Integer file_no Returns String
+//  // Parameters: !1 - File number
+//  // Returns next key number for the file number given and increments the number in the file
+//  // Added ability to look for NEXKEY table ahead of UNIQUEKY table for simplified unique keys
+//  // 05/2025 added first SQL sequence capability for 171 to 176 tables which must exist in the DB
+//  
+//    Integer liTemp
+//    String lsRtnVal lsTableName
+//    String sSQLQuery
+//    String[][] sResultSet
+//
+//    If      (file_no = 171) Move "Next_RECKEY" to lsTableName
+//    Else If (file_no = 172) Move "Next_TCLEGS_ID" to lsTableName
+//    Else If (file_no = 173) Move "Next_TCSERVIC_ID" to lsTableName
+//    Else If (file_no = 174) Move "Next_TCHOTEL_ID" to lsTableName
+//    Else If (file_no = 175) Move "Next_TCUDIDS_ID" to lsTableName
+//    Else If (file_no = 176) Move "Next_TCCARS_ID" to lsTableName
+//    Else Move '' to lsTableName
+//  
+//    If (trim(lsTableName) <> '') Begin
+//        Move ("SELECT NEXT VALUE FOR" * String(lsTableName)) to sSQLQuery
+//        Send Execute_Native_SQL (&sResultSet) sSQLQuery
+//        If (SizeOfArray(sResultSet) > 0) ;
+//            Move sResultSet[0][0] to lsRtnVal
+//    End
+////  Else Begin
+////     If (Nextkey_Table_Present()) Begin
+////        Move FIELDINDEX to liTemp // Hold current fieldindex
+////        Move (Integer(file_no)) to FIELDINDEX
+////   //     OPEN NEXTKEY   // Should already be open to avoid transaction problems (see nextkey.pkg)
+////        D_lock
+////        Clear NEXTKEY
+////        Find GE NEXTKEY.RECNUM
+////        Move NEXTKEY.RECNUM& to lsRtnVal
+////        CALC (NEXTKEY.RECNUM& + 1) to NEXTKEY.RECNUM&
+////        SaveRecord NEXTKEY
+////        D_unlock
+////        Move NEXTKEY.RECNUM& to lsRtnVal
+////        Move liTemp to FIELDINDEX
+////        End
+////     Else Begin
+////        D_lock
+////        Clear UNIQUEKY
+////        Move file_no to UNIQUEKY.FILE_NO
+////        Find EQ UNIQUEKY.FILE_NO
+////        [FINDERR] Move 1 to UNIQUEKY.NEXT_KEY_NO
+////        CALC (UNIQUEKY.NEXT_KEY_NO + 1) to UNIQUEKY.NEXT_KEY_NO
+////        SaveRecord UNIQUEKY
+////        D_unlock
+////        Move (String(UNIQUEKY.NEXT_KEY_NO - 1)) to lsRtnVal
+////        End
+////  End
+//
+//  Function_Return (lsRtnVal)
+//End_Function
+
+
+//Function Get_Next_Unique_Key Global Integer iKey Returns String
+//    // Parameters: !1 - File number (ex. 34 for G/L vouchers or any desired key number)
+//    // Returns next key number for the file/key number given and increments the number in the file
+//    Clear UNIQUEKY
+//    Move iKey to UNIQUEKY.FILE_NO
+//    Find EQ UNIQUEKY.FILE_NO
+//    If (not(Found)) Move 1 to UNIQUEKY.NEXT_KEY_NO
+//    Move (UNIQUEKY.NEXT_KEY_NO + 1) to UNIQUEKY.NEXT_KEY_NO
+//    SaveRecord UNIQUEKY
+//    Function_Return (String(UNIQUEKY.NEXT_KEY_NO - 1))
+//End_Function
+
+
+//Procedure Post_Transaction Global Date dDate String sRef String sVch String sSrc String sRefCode ;
+//                            String sDesc Number nAmt String sAcct String sDrCr
+//    If (nAmt <> 0) Begin
+//        Clear TRANSACT
+//        Move (Date(CurrentDateTime())) to TRANSACT.SYSTEM_DATE // Force to only date instead of datetime
+//        Move dDate to TRANSACT.TRX_DATE
+//        Move sRef to TRANSACT.REFERENCE#
+//        Move sVch to TRANSACT.VOUCHER
+//        Move gsUser_id to TRANSACT.USERID
+//        Move sSrc to TRANSACT.SOURCE   // AR journal
+//        Move sRefCode to TRANSACT.REF_CODE // Reference#
+//        Move sDesc to TRANSACT.DESCRIPTION
+//        Move nAmt to TRANSACT.TRX_AMOUNT
+//        Move sAcct to TRANSACT.ACCOUNT#
+//        Move sDrcr to TRANSACT.DEBIT_CREDIT
+//
+//        Send Update_Gl_Acct TRANSACT.TRX_DATE TRANSACT.TRX_AMOUNT TRANSACT.ACCOUNT# TRANSACT.DEBIT_CREDIT
+//        If (TRANSACT.TRX_AMOUNT < 0) Begin // Reverse G/L columns and sign
+//            Move (-1 * TRANSACT.TRX_AMOUNT) to TRANSACT.TRX_AMOUNT
+//            If (TRANSACT.DEBIT_CREDIT = "D") Move "C" to TRANSACT.DEBIT_CREDIT
+//            Else Move "D" to TRANSACT.DEBIT_CREDIT
+//        End
+//        SaveRecord TRANSACT
+//    End
+//End_Procedure
+
+
+//Procedure Kill_Transact
+//    // We assume there is an active TRANSACT in the buffer
+//    If (TRANSACT.RECNUM <> 0) Begin
+//        Send Update_Gl_Acct TRANSACT.TRX_DATE (-1.0 * TRANSACT.TRX_AMOUNT) TRANSACT.ACCOUNT# TRANSACT.DEBIT_CREDIT
+//        Delete TRANSACT
+//    End
+//End_Procedure
+
+//Function Is_debit_acct Global String sAcct Returns Boolean
+//    If ((Left(String(sAcct), 2) < 20) or (Left(String(sAcct), 2) >= 43)) Function_Return (True)
+//    Else Function_Return (False)
+//End_Function
+
+//Procedure Update_Gl_Acct Global Date dDate Number nAmt String sAcct String sDrCr
+//    Clear GLCHART
+//    Move sAcct to GLCHART.ACCOUNT#
+//    Move (DateGetYear(dDate)) to GLCHART.YEAR
+//    Find EQ GLCHART by Index.1 // Acccount#, Year
+//    If not (Found) Begin
+//        Clear GLCHART
+//        Move sAcct to GLCHART.ACCOUNT#
+//        Move (DateGetYear(dDate)) to GLCHART.YEAR
+//        Find LE GLCHART by Index.1 // Acccount#, Year
+//        If (GLCHART.ACCOUNT# = sAcct) Begin
+//            // We have a prior year, same account# record so pseudo clear and create this year
+//            Move 0 to GLCHART.RECNUM // Pseudo clear
+//            Move (DateGetYear(dDate)) to GLCHART.YEAR
+//            For FIELDINDEX from 0 to 12
+//                Move (0) to GLCHART.LAST_YEAR_BAL& // Wipe prior activity
+//            Loop
+//        End
+//        Else Begin
+//            // We don't have a prior year for this account, create a new one
+//            Clear GLCHART
+//            Move sAcct to GLCHART.ACCOUNT#
+//            Move "Computer Generated" to GLCHART.DESCRIPTION
+//            Move (DateGetYear(dDate)) to GLCHART.YEAR
+//            If (Is_debit_acct(String(sAcct))) Move 'D' to GLCHART.DEBIT_CREDIT
+//            Else                              Move 'C' to GLCHART.DEBIT_CREDIT
+//        End
+//    End
+//    Move (DateGetMonth(dDate)) to FieldIndex
+//    If not (GLCHART.DEBIT_CREDIT = sDrCr) Move ((-1 * nAmt) + GLCHART.LAST_YEAR_BAL&) to GLCHART.LAST_YEAR_BAL&
+//    Else Move (nAmt + GLCHART.LAST_YEAR_BAL&) to GLCHART.LAST_YEAR_BAL&
+//    Move '*' to GLCHART.ACTIVE
+//    SaveRecord GLCHART
+//End_Procedure
+//
+//Function Description_Of_GLCHART Global Integer iAcct Date dDate Returns String
+//    If (dDate = '') ; // Default on blank date to today (ie. this year)
+//        Move (CurrentDateTime()) to dDate
+//    Clear GLCHART
+//    Move (DateGetYear(dDate)) to GLCHART.YEAR
+//    Move iAcct to GLCHART.ACCOUNT#
+//    Find eq GLCHART by Index.1 // Account#, Year
+//    If (not(Found)) Clear GLCHART
+//    Function_Return (Trim(GLCHART.DESCRIPTION))
+//End_Function
+//
+//Declare_Datafile VENDOR
+//Function Exist_Vendor Global String sVendor Returns Boolean
+//    Integer iCount
+//    String[][] sResultSet
+//    String sSQLQuery
+//
+//    Move ("select count(*) from " * Qualified_Database_Name(VENDOR.File_number) + " ") to sSQLQuery
+//    Move (sSQLQuery + "where [CODE] = '" + String(sVendor) + "' " ) to sSQLQuery
+//
+//    Send Execute_Native_SQL (&sResultSet) sSQLQuery
+//
+//    If (SizeOfArray(sResultSet) > 0) ; // Single returned value
+//        Move (Integer(sResultSet[0][0])) to iCount
+//
+////    SQL_OPEN_CURSOR_STMT to hCursor
+////    SQL_SET_STMT    to ("select count(*) from " * Qualified_Database_Name(VENDOR.File_number) + " ")
+////    SQL_APPEND_STMT to (" where [CODE] = '" + String(sVendor) + "' " )
+////    SQL_PREPARE_STMT
+////    SQL_EXECUTE_STMT
+////    SQL_FETCH_NEXT_ROW into iCount
+////    SQL_CLOSE_CURSOR_STMT to hCursor
+////    SQL_CANCEL_QUERY_STMT 
+//    Function_Return (iCount <> 0)
+//End_Function
+//
+//Declare_Datafile PROJECT
+//Function Exist_Project Global String sProject Returns Boolean
+//    Integer iCount
+//    String[][] sResultSet
+//    String sSQLQuery
+//
+//    Move ("select count(*) from " * Qualified_Database_Name(PROJECT.File_number) + " ") to sSQLQuery
+//    Move (sSQLQuery + "where [PROJECT_NO] = '" + String(sProject) + "' " ) to sSQLQuery
+//
+//    Send Execute_Native_SQL (&sResultSet) sSQLQuery
+//
+//    If (SizeOfArray(sResultSet) > 0) ; // Single returned value
+//        Move (Integer(sResultSet[0][0])) to iCount
+//
+////    SQL_OPEN_CURSOR_STMT to hCursor
+////    SQL_SET_STMT    to ("select count(*) from " * Qualified_Database_Name(PROJECT.File_number) + " ")
+////    SQL_APPEND_STMT to (" where [PROJECT_NO] = '" + String(sProject) + "' " )
+////    SQL_PREPARE_STMT
+////    SQL_EXECUTE_STMT
+////    SQL_FETCH_NEXT_ROW into iCount
+////    SQL_CLOSE_CURSOR_STMT to hCursor
+////    SQL_CANCEL_QUERY_STMT 
+//    Function_Return (iCount <> 0)
+//End_Function
+//
+//Declare_Datafile PURCHASE
+//Function Exist_Purchase Global String sPO Returns Boolean
+//    Integer iCount
+//    String[][] sResultSet
+//    String sSQLQuery
+//
+//    Move ("select count(*) from " * Qualified_Database_Name(PURCHASE.File_number) + " ") to sSQLQuery
+//    Move (sSQLQuery + "where [ORDER_NO] = '" + String(sPO) + "' " ) to sSQLQuery
+//
+//    Send Execute_Native_SQL (&sResultSet) sSQLQuery
+//
+//    If (SizeOfArray(sResultSet) > 0) ; // Single returned value
+//        Move (Integer(sResultSet[0][0])) to iCount
+//
+////    SQL_OPEN_CURSOR_STMT to hCursor
+////    SQL_SET_STMT    to ("select count(*) from " * Qualified_Database_Name(PURCHASE.File_number) + " ")
+////    SQL_APPEND_STMT to (" where [ORDER_NO] = '" + String(sPO) + "' " )
+////    SQL_PREPARE_STMT
+////    SQL_EXECUTE_STMT
+////    SQL_FETCH_NEXT_ROW into iCount
+////    SQL_CLOSE_CURSOR_STMT to hCursor
+////    SQL_CANCEL_QUERY_STMT 
+//    Function_Return (iCount <> 0)
+//End_Function
+//
+//Function Vendor_Of_Purchase Global String sPO Returns String
+//    String sRtnVal
+//    String[][] sResultSet
+//    String sSQLQuery
+//
+//    Move ("select [VENDOR] from " * Qualified_Database_Name(PURCHASE.File_number)) to sSQLQuery
+//    Move (sSQLQuery + "where [ORDER_NO] = '" + String(sPO) + "' " ) to sSQLQuery
+//
+//    Send Execute_Native_SQL (&sResultSet) sSQLQuery
+//
+//    If (SizeOfArray(sResultSet) > 0) ; // Single returned value
+//        Move (sResultSet[0][0]) to sRtnVal
+//
+////    SQL_OPEN_CURSOR_STMT to hCursor
+////    SQL_SET_STMT    to ("select [VENDOR] from " * Qualified_Database_Name(PURCHASE.File_number))
+////    SQL_APPEND_STMT to (" where [ORDER_NO] = '" + String(sPO) + "' " )
+////    SQL_PREPARE_STMT
+////    SQL_EXECUTE_STMT
+////    SQL_FETCH_NEXT_ROW into sRtnVal
+////    SQL_CLOSE_CURSOR_STMT to hCursor
+////    SQL_CANCEL_QUERY_STMT 
+//    Function_Return (sRtnVal)
+//End_Function
+//
+//Function Project_Of_Purchase Global String sPO Returns String
+//    String sRtnVal
+//    String[][] sResultSet
+//    String sSQLQuery
+//
+//    Move ("select [PROJECT] from " * Qualified_Database_Name(PURCHASE.File_number)) to sSQLQuery
+//    Move (sSQLQuery + "where [ORDER_NO] = '" + String(sPO) + "' " ) to sSQLQuery
+//
+//    Send Execute_Native_SQL (&sResultSet) sSQLQuery
+//
+//    If (SizeOfArray(sResultSet) > 0) ; // Single returned value
+//        Move (sResultSet[0][0]) to sRtnVal
+//
+////    SQL_OPEN_CURSOR_STMT to hCursor
+////    SQL_SET_STMT    to ("select [PROJECT] from " * Qualified_Database_Name(PURCHASE.File_number))
+////    SQL_APPEND_STMT to (" where [ORDER_NO] = '" + String(sPO) + "' " )
+////    SQL_PREPARE_STMT
+////    SQL_EXECUTE_STMT
+////    SQL_FETCH_NEXT_ROW into sRtnVal
+////    SQL_CLOSE_CURSOR_STMT to hCursor
+////    SQL_CANCEL_QUERY_STMT 
+//    Function_Return (sRtnVal)
+//End_Function
+//
+//Declare_Datafile INVOICE
+//Function BillTo_Of_Invoice Global String sInvoice Returns String
+//    String sRtnVal
+//    String[][] sResultSet
+//    String sSQLQuery
+//
+//    Move ("select [BILLTO] from " * Qualified_Database_Name(INVOICE.File_number)) to sSQLQuery
+//    Move (sSQLQuery + "where [INVOICE_NO] = '" + String(sInvoice) + "' " ) to sSQLQuery
+//
+//    Send Execute_Native_SQL (&sResultSet) sSQLQuery
+//
+//    If (SizeOfArray(sResultSet) > 0) ; // Single returned value
+//        Move (sResultSet[0][0]) to sRtnVal
+//
+////    SQL_OPEN_CURSOR_STMT to hCursor
+////    SQL_SET_STMT    to ("select [BILLTO] from " * Qualified_Database_Name(INVOICE.File_number))
+////    SQL_APPEND_STMT to (" where [INVOICE_NO] = '" + String(sInvoice) + "' " )
+////    SQL_PREPARE_STMT
+////    SQL_EXECUTE_STMT
+////    SQL_FETCH_NEXT_ROW into sRtnVal
+////    SQL_CLOSE_CURSOR_STMT to hCursor
+////    SQL_CANCEL_QUERY_STMT 
+//    Function_Return (sRtnVal)
+//End_Function
+//
+//Function Project_Of_Invoice Global String sInvoice Returns String
+//    String sRtnVal
+//    String[][] sResultSet
+//    String sSQLQuery
+//
+//    Move ("select [PROJECT] from " * Qualified_Database_Name(INVOICE.File_number)) to sSQLQuery
+//    Move (sSQLQuery + "where [INVOICE_NO] = '" + String(sInvoice) + "' " ) to sSQLQuery
+//
+//    Send Execute_Native_SQL (&sResultSet) sSQLQuery
+//
+//    If (SizeOfArray(sResultSet) > 0) ; // Single returned value
+//        Move (sResultSet[0][0]) to sRtnVal
+//
+////    SQL_OPEN_CURSOR_STMT to hCursor
+////    SQL_SET_STMT    to ("select [PROJECT] from " * Qualified_Database_Name(INVOICE.File_number))
+////    SQL_APPEND_STMT to (" where [INVOICE_NO] = '" + String(sInvoice) + "' " )
+////    SQL_PREPARE_STMT
+////    SQL_EXECUTE_STMT
+////    SQL_FETCH_NEXT_ROW into sRtnVal
+////    SQL_CLOSE_CURSOR_STMT to hCursor
+////    SQL_CANCEL_QUERY_STMT 
+//    Function_Return (sRtnVal)
+//End_Function
+//
+//Function Exist_GlAcct Global Integer iAcct Date dDate Returns Boolean
+//    If (dDate = '') ; // Default on blank date to today (ie. this year)
+//        Move (CurrentDateTime()) to dDate
+//    Move (DateGetYear(dDate)) to GLCHART.YEAR
+//    Move iAcct to GLCHART.ACCOUNT#
+//    Find eq GLCHART by Index.1 // Account#, Year
+//    If (not(Found)) Clear GLCHART
+//    Function_Return (GLCHART.RECNUM <> '')
+//End_Function
+//
+
+
+
+//Declare_Datafile VENDOR
+//Function Name_Of_VENDOR Global String sCode Returns String
+//    Clear VENDOR
+//    Move sCode to VENDOR.CODE
+//    Find eq VENDOR by Index.1 // Code
+//    If (not(Found)) Clear VENDOR
+//    Function_Return (If(VENDOR.RECNUM <> 0, VENDOR.NAME, "Unknown:" * sCode))
+//End_Function
+//
+//Declare_Datafile AGENT
+//Function Name_Of_AGENT Global String sCode Returns String
+//    Clear AGENT
+//    Move sCode to AGENT.AGENT
+//    Find eq AGENT by Index.1 // Code
+//    If (not(Found)) Clear AGENT
+//    Function_Return (If(AGENT.RECNUM <> 0, trim(AGENT.FIRST_NAME) * Trim(AGENT.LAST_NAME), ''))
+//End_Function
+//
+//
+//Procedure Locate_Arjrnl_Record Global String sCode ;
+//                                      String sReference ;
+//                                      String sType
+//    // Taken from ALPHA 2 instead of Longo
+//    Boolean bMatchedRecord
+//    
+//    Clear ARJRNL
+//    Move sCode      to ARJRNL.CODE // Prime the ARJRNL index elements
+//    Move sReference to ARJRNL.REFERENCE#
+//    Find GE ARJRNL by Index.2 // Code, Reference#, Recnum
+//    If (Found) Move (ARJRNL.CODE = sCode) to Found
+//    If (Found) Move (ARJRNL.REFERENCE# = sReference) to Found
+//    While ((Found) and (not(bMatchedRecord))) // Get the invoice for this company if any
+//        Move (ARJRNL.REFERENCE# = sReference) to bMatchedRecord
+//        If (bMatchedRecord) Move (ARJRNL.CODE = sCode) to bMatchedRecord
+//        If (bMatchedRecord) Move (ARJRNL.TRX_TYPE = sType) to bMatchedRecord
+//        If (not(bMatchedRecord) and (Found)) Find GT ARJRNL by Index.2 // Code, Reference#, Recnum
+//        If (not(bMatchedRecord) and (Found)) Move (ARJRNL.CODE = sCode) to Found
+//        If (not(bMatchedRecord) and (Found)) Move (ARJRNL.REFERENCE# = sReference) to Found
+//    Loop // End WHILE
+//    If (not(Found) or not(bMatchedRecord)) ;
+//        Clear ARJRNL
+//End_Procedure
+//
+////get_arjrnl_buffer:  Longo
+////  Relate Item // Pull in Invoice...
+////  Clear ARJRNL
+////  Move INVOICE.BILLTO to ARJRNL.CODE // Prime the ARJRNL index elements
+////  Move Item.INVOICE   to ARJRNL.REFERENCE#
+////  Repeat // Loop till we have the correct invoice, beyond the co_code & ref# or EOF
+////    Find GT ARJRNL by Index.2 // Code, Reference#, Recnum
+////    [Found] INDICATE Found       as ARJRNL.CODE       EQ INVOICE.BILLTO
+////    [Found] INDICATE good_record as ARJRNL.REFERENCE# EQ Item.INVOICE
+////    INDICATE go_ahead GROUP ANY [not Found good_record]
+////    Until [go_ahead]
+////  [not Found] Clear ARJRNL
+////  RETURN
+//
+//Procedure Locate_Apjrnl_Record Global String sCode ;
+//                                      String sReference ;
+//                                      String sType
+//    // Taken from ALPHA 2 instead of Longo
+//    Boolean bMatchedRecord
+//    
+//    Clear APJRNL
+//    Move sCode      to APJRNL.VENDOR_CODE // Prime the APJRNL index elements
+//    Move sReference to APJRNL.REFERENCE#
+//    Find GE APJRNL by Index.2 // Vendor_Code, Reference#, Recnum
+//    If (Found) Move (APJRNL.VENDOR_CODE = sCode) to Found
+//    If (Found) Move (APJRNL.REFERENCE# = sReference) to Found
+//    While ((Found) and (not(bMatchedRecord))) // Get the PO for this company if any
+//        Move (APJRNL.REFERENCE# = sReference) to bMatchedRecord
+//        If (bMatchedRecord) Move (APJRNL.VENDOR_CODE = sCode) to bMatchedRecord
+//        If (bMatchedRecord) Move (APJRNL.TRX_TYPE = sType) to bMatchedRecord
+//        If (not(bMatchedRecord) and (Found)) Find GT APJRNL by Index.2 // Vendor_Code, Reference#, Recnum
+//        If (not(bMatchedRecord) and (Found)) Move (APJRNL.VENDOR_CODE = sCode) to Found
+//        If (not(bMatchedRecord) and (Found)) Move (APJRNL.REFERENCE# = sReference) to Found
+//    Loop // End WHILE
+//    If (not(Found) or not(bMatchedRecord)) ;
+//        Clear APJRNL
+//End_Procedure
+//
+//Procedure Update_Arjrnl_Acct Global Integer iAcct Number nAmt
+//    Integer iHoldFieldIndex
+//    Boolean bTemp
+//
+//    If (iAcct <> 0) Begin // Only process non blank/zero G/L accounts
+//        Move FieldIndex to iHoldFieldIndex // Hold to replace it later
+//        Move 0 to FieldIndex
+//        Move (ARJRNL.POST2_ACCT <> iAcct) to bTemp
+//        If (bTemp) Move (ARJRNL.POST2_ACCT <> 0) to bTemp
+//        While (bTemp) // ToDo: This does not appear to stop on the last account slot
+//            Move (FieldIndex + 2) to FieldIndex
+//            Move (ARJRNL.POST2_ACCT& <> iAcct) to bTemp
+//            If (bTemp) Move (ARJRNL.POST2_ACCT& <> 0) to bTemp
+//        Loop
+//        Add nAmt to ARJRNL.AMOUNT2&      // Add to proper account
+//        Move iAcct to ARJRNL.POST2_ACCT& // Move in account label
+//        Move iHoldFieldIndex to FieldIndex // Replace global fieldindex
+//    End
+//End_Procedure
+//
+////#COMMAND Update_arjrnl_acct // Put posting references into a/r journal file
+////  // Parameters:
+////  // !1 gl account number
+////  // !2 amount to post
+////  [] Begin
+////    #IFDEF Hold_fieldindex
+////    #ELSE
+////      Integer Hold_fieldindex
+////      #ENDIF
+////    If !1 NE 0 Begin // Skip blank G/L accounts
+////      Move FIELDINDEX to Hold_fieldindex
+////      Move (0) to FIELDINDEX
+////      INDICATE temp_indicator as ARJRNL.POST2_ACCT NE !1
+////      [temp_indicator] INDICATE temp_indicator as ARJRNL.POST2_ACCT NE 0
+////      While [temp_indicator] //Not match and not zero
+////        Move (FIELDINDEX + 2) to FIELDINDEX
+////        INDICATE temp_indicator as ARJRNL.POST2_ACCT& NE !1
+////        [temp_indicator] INDICATE temp_indicator as ARJRNL.POST2_ACCT& NE 0
+////        End
+////      CALC (ARJRNL.AMOUNT2& + !2) to ARJRNL.AMOUNT2& // Add to proper account
+////      Move !1 to ARJRNL.POST2_ACCT&                  // Move in account label
+////      Move Hold_fieldindex to FIELDINDEX
+////      End
+////    End
+////  #ENDCOMMAND
+//
+//Procedure Update_Apjrnl_Acct Global Integer iAcct Number nAmt
+//    Integer iHoldFieldIndex
+//    Boolean bTemp
+//
+//    If (iAcct <> 0) Begin // Only process non blank/zero G/L accounts
+//        Move FieldIndex to iHoldFieldIndex // Hold to replace it later
+//        Move 0 to FieldIndex
+//        Move (APJRNL.POST2_ACCT <> iAcct) to bTemp
+//        If (bTemp) Move (APJRNL.POST2_ACCT <> 0) to bTemp
+//        While (bTemp) // ToDo: This does not appear to stop on the last account slot
+//            Move (FieldIndex + 2) to FieldIndex
+//            Move (APJRNL.POST2_ACCT& <> iAcct) to bTemp
+//            If (bTemp) Move (APJRNL.POST2_ACCT& <> 0) to bTemp
+//        Loop
+//        Add nAmt to APJRNL.AMOUNT2&      // Add to proper account
+//        Move iAcct to APJRNL.POST2_ACCT& // Move in account label
+//        Move iHoldFieldIndex to FieldIndex // Replace global fieldindex
+//    End
+//End_Procedure
+//
+Function Time_From_HHMM_To_XML_Format Global String sInputTime Returns String
+    String sAssembledTime
+
+    Move (Lpad_With(sInputTime, 4, '0')) to sAssembledTime
+    Function_Return (sAssembledTime)
+End_Function
+
+Function DateTime_To_XML_Format Global String sInputDateTime Returns String
+    String sYear sMonth sDay sHour sMinute sSecond sAssembledDateTime
+    DateTime dtInputDateTime
+    
+    Move sInputDateTime to dtInputDateTime
+    Move (DateGetYear(dtInputDateTime)) to sYear
+    Move (DateGetMonth(dtInputDateTime)) to sMonth
+    Move (DateGetDay(dtInputDateTime)) to sDay
+    Move (DateGetHour(dtInputDateTime)) to sHour
+    Move (DateGetMinute(dtInputDateTime)) to sMinute
+    Move (DateGetSecond(dtInputDateTime)) to sSecond
+
+    Move (Lpad_With(sMonth, 2, '0')) to sMonth
+    Move (Lpad_With(sDay, 2, '0')) to sDay
+    Move (Lpad_With(sHour, 2, '0')) to sHour
+    Move (Lpad_With(sMinute, 2, '0')) to sMinute
+    Move (Lpad_With(sSecond, 2, '0')) to sSecond
+    
+    // Ex: 2024-10-16T05:08:39
+    Move (String(sYear) - '-' - String(sMonth) - '-' - String(sDay)) to sAssembledDateTime
+    Move (sAssembledDateTime - 'T' - String(sHour) - ':' - String(sMinute) - ':' - String(sSecond)) to sAssembledDateTime
+    Function_Return (sAssembledDateTime) 
+End_Function
+
+Function Right_Now Global Returns String 
+    // Returns present time as 24 hr HHMM string
+    String sHr sMn
+    Move (Lpad_With(DateGetHour(CurrentDateTime()), 2, '0')) to sHr
+    Move (Lpad_With(DateGetMinute(CurrentDateTime()), 2, '0')) to sMn
+    Function_Return (String(sHr) + String(sMn))
+End_Function
+
+Function Military_To_AmPm Global String sHhMm Returns String
+    // Returns 24 hr HHMM to Am/Pm (ex. ##:##?M)
+    String sRtnVal sHr sAmPm
+    Move (Lpad(sHhMm, 4)) to sRtnVal
+    Move (Left(sRtnVal, 2)) to sHr
+    If (sHr > 11) Move "PM" to sAmPm
+    Else          Move "AM" to sAmPm
+    If (sHr > 12) Move (sHr - 12) to sHr
+    Else Move (sHr - 0) to sHr // Trims off leading 0
+    If (sHr = "00") Move "12" to sHr
+    Move (String(sHr) + ':' + String(Mid(sRtnVal, 2, 3)) + sAmPm) to sRtnVal
+    Function_Return (sRtnVal)
+End_Function
+
+Function Get_First_Of_Month Global Date dDate Returns Date
+    String sDate
+    Move (dDate) to sDate
+    Function_Return (left(sDate, 2) + "/01/" + right(sDate, 4)) // Does not handle non US dates yet
+End_Function
+
+Function Get_Last_Of_Month Global Date dDate Returns Date
+    String sDate
+    Move (Get_First_Of_Month(dDate)) to sDate // Start on the first day of this month
+    If (DateGetDay(sDate) < 15) Move (Date(sDate + 40)) to sDate
+    Else                        Move (Date(sDate + 20)) to sDate
+    // sDate now has a day in next month
+    Function_Return (Date(Get_First_Of_Month(sDate) - 1)) // Return the day prior to the first of next month
+End_Function
+
+Function Get_First_Of_Year Global Date dDate Returns Date
+    String sDate
+    Move (dDate) to sDate
+    Function_Return ("01/01/" + right(sDate, 4)) // Does not handle non US dates yet
+End_Function
+
+
+Function Date_Parameter Global String sInputStr Returns Date
+  Date dTempDate dFirstDate dLastDate dToday
+  String sTemp
+
+  Move (CurrentDateTime()) to dToday
+  Move (Get_first_of_month(dToday)) to dFirstDate
+  Move (Get_last_of_month(dToday)) to dLastDate
+
+  Move (Uppercase(sInputStr)) to sTemp
+  If (sTemp contains "TODAY") Begin
+     Move (Replace("TODAY", sTemp, String(Date(dToday)))) to sTemp
+     If (sTemp = dToday) Move sTemp to dTempDate // Eval won't work on a lone date
+     Else                Move (Integer(Eval(sTemp))) to dTempDate
+     End
+  Else If (sTemp contains "YESTERDAY") Begin
+     Move (Replace("YESTERDAY", sTemp, String(Date(dToday - 1)))) to sTemp
+     If (sTemp = (dToday - 1)) Move sTemp to dTempDate // Eval won't work on a lone date
+     Else                      Move (Integer(Eval(sTemp))) to dTempDate
+     End
+  Else If (sTemp contains "TOMORROW") Begin
+     Move (Replace("TOMORROW", sTemp, String(Date(dToday + 1)))) to sTemp
+     If (sTemp = (dToday + 1)) Move sTemp to dTempDate // Eval won't work on a lone date
+     Else                      Move (Integer(Eval(sTemp))) to dTempDate
+     End
+  Else If (sTemp contains "CMSTART") Begin
+     Move (Replace("CMSTART", sTemp, String(Date(dFirstDate)))) to sTemp
+     Move (Integer(eval(sTemp))) to dTempDate
+     End
+  Else If (sTemp contains "CMEND") Begin
+     Move (Replace("CMEND", sTemp, String(Date(dLastDate)))) to sTemp
+     Move (Integer(eval(sTemp))) to dTempDate
+     End
+  Else If (sTemp contains "PMSTART") Begin
+     Move (Get_first_of_month(Date((dFirstDate - 1)))) to dFirstDate
+     Move (Replace("PMSTART", sTemp, String(Date(dFirstDate)))) to sTemp
+     Move (Integer(eval(sTemp))) to dTempDate
+     End
+  Else If (sTemp contains "PMEND") Begin
+     Move (Replace("PMEND", sTemp, String(Date(dFirstDate - 1)))) to sTemp
+     Move (Integer(eval(sTemp))) to dTempDate
+     End
+  Else Move sTemp to dTempDate
+  Function_Return (dTempDate)
+End_Function
+
+
+//Declare_Datafile SYSFILE
+//Procedure Int_Stack_Push Global Integer iIntVal
+//    Integer hold_fieldindex
+//    Move FieldIndex to hold_fieldindex // Hold current value
+//    If (SYSFILE.STACK_INDEX = 16) Begin
+//        Send UserError "Stack Overflow Error" "Logic Error"
+//    End
+//    Move (SYSFILE.STACK_INDEX + 1) to SYSFILE.STACK_INDEX
+//    Move SYSFILE.STACK_INDEX to FIELDINDEX
+//    Move iIntVal to SYSFILE.STACK1&
+//    Move hold_fieldindex to FieldIndex
+//End_Procedure
+//
+//Function Int_Stack_Pop Global Returns Integer
+//    Integer hold_fieldindex iRtnVal
+//    Move FieldIndex to hold_fieldindex // Hold current value
+//    If (SYSFILE.STACK_INDEX = 0) Begin
+//        Send UserError "Stack Underflow Error" "Logic Error"
+//    End
+//    Move SYSFILE.STACK_INDEX to FieldIndex
+//    Move SYSFILE.STACK1& to iRtnVal
+//    Move 0 to SYSFILE.STACK1 // Blank the value
+//    Move (SYSFILE.STACK_INDEX - 1) to SYSFILE.STACK_INDEX
+//    Move hold_fieldindex to FieldIndex
+//    Function_Return (iRtnVal)    
+//End_Function
+//
+//#COMMAND Save_Windowindex
+//  Send Int_stack_push WindowIndex
+//#ENDCOMMAND
+//
+//#COMMAND Restore_Windowindex
+//  Move (Int_Stack_Pop()) to WindowIndex
+//#ENDCOMMAND
+//
+//#COMMAND Hold_Place // Push record number onto stack
+//  // Parameters: 1 - Filename to push record number of
+//  Send Int_stack_push !1.RECNUM
+//#ENDCOMMAND
+//
+//#COMMAND Return_To_Place // Pop record number from stack and fetch
+//  // Parameters: !1 - Filename to return pointer to
+//  Clear !1
+//  Move (Int_Stack_Pop()) to !1.RECNUM
+//  Find EQ !1.RECNUM
+//#ENDCOMMAND
+
+
+Function Move_Min Global String sVal1 String sVal2 Returns String
+    Function_Return (If(sVal1 < sVal2, sVal1, sVal2))
+End_Function
+
+
+Function Move_Max Global String sVal1 String sVal2 Returns String
+    Function_Return (If(sVal1 > sVal2, sVal1, sVal2))
+End_Function
+
+
+Function BigIntMod Global BigInt biInput Integer iDivisor Returns BigInt
+    Function_Return (biInput - ((biInput / Integer(iDivisor)) * Integer(iDivisor)))
+End_Function
+
+Function Strip_Non_Base36 Global String sInput Returns String
+    Integer iPtr iAscii
+    String sWork sChar
+
+    For iPtr from 1 to (Length(sInput))
+        Move (Mid(sInput, 1, iPtr)) to sChar
+        Move (Ascii(sChar)) to iAscii
+        If ((iAscii >= 48 and iAscii <= 57) or ;
+            (iAscii >= 65 and iAscii <= 90)) Begin
+            Move (sWork + String(sChar)) to sWork
+        End
+    Loop    
+    Function_Return sWork // Only returns valid base 36 characters
+End_Function
+
+Function Decimal_to_Base36 Global BigInt biDecimal Returns String
+    String sResult
+
+    While (biDecimal > 0)
+        Move (Insert(Character(BigIntMod(biDecimal, 36) + If(BigIntMod(biDecimal, 36) < 10, 48, 55)), sResult, 0)) to sResult
+        Move (biDecimal / 36) to biDecimal
+    Loop
+
+    Function_Return sResult
+End_Function
+
+Function Base36_to_Decimal Global String sBase36 Returns BigInt
+    Integer iPtr iPower
+    BigInt biResult
+
+    For iPtr from 1 to (Length(sBase36))
+        Move (Length(sBase36) - iPtr) to iPower
+        Move (((36 ^ iPower) * (Ascii(mid(sBase36, 1, iPtr)) - If(Ascii(mid(sBase36, 1, iPtr)) < 58, 48, 55))) + biResult) to biResult
+    Loop
+
+    Function_Return biResult
+End_Function
+
+Function Create_Pseudo_Locator Global String sPaxLast String sPaxFirst Date dStartDate Returns String
+    String sWorkStr
+    BigInt biResult
+    
+    Move (String(Left(Strip_Non_Base36(Uppercase(sPaxLast)), 3)) - String(Left(Strip_Non_Base36(Uppercase(sPaxFirst)), 3))) to sWorkStr
+    Move (Base36_to_Decimal(sWorkStr)) to biResult
+    Move (biResult + (Integer(dStartDate) - Integer("01/01/1980"))) to biResult
+    Move (Decimal_to_Base36(biResult)) to sWorkStr // Convert to characters
+    Move (Lpad_With(sWorkStr, 6, '9')) to sWorkStr // Push to 6 chars with '9' in case of short names
+    Move ('Z' + String(sWorkStr)) to sWorkStr // Prepend the 'Z' indicating pseudo locator
+    Function_Return (sWorkStr)
+End_Function
+
+Function Create_Alfetta_TripId Global String sLocator String sCustomer Returns String
+    BigInt biResult
+    String sWorkStr
+    
+//    Move (Base36_to_Decimal(Strip_Non_Base36(sCustomer))) to biResult // Testing
+//    Move (Base36_to_Decimal(Strip_Non_Base36(sLocator))) to biResult
+//    Move (biResult + Base36_to_Decimal(Strip_Non_Base36(sCustomer))) to biResult
+//    Move (Decimal_to_Base36(biResult)) to sWorkStr
+
+    // Push customer to 10 characters and locator to 7 (due to blank locator logic producing 7 char locators).
+    // Then just append them.
+
+    // Special case of 'hyphenated' locators that we want to merge into the non-hyphenated trip/locator
+    If (Mid(sLocator, 3, 7) contains '-') Begin // There is a hyphen at pos 7 or after
+        Move (Left(sLocator, Pos('-', sLocator) - 1)) to sLocator // Strip off the hypen and the rest. Use the base locator only.
+    End
+
+    Move (trim(sCustomer)) to sWorkStr
+    While (Length(sWorkStr) < 10) 
+        Move (sWorkStr + 'X') to sWorkStr // Pad with 'X'
+    Loop
+    Move (sWorkStr + String(Lpad_With(trim(sLocator), 7, "9"))) to sWorkStr // Prepend with '9'
+    Function_Return sWorkStr
+End_Function
+
+
+//Function Compute_Balance3 Global Integer iAcct Date dDate Returns Number
+//    Integer iYear iMonth Hold_FieldIndex
+//    Number nTotal
+//    Date dEndDate dStartDate
+//    Boolean bComputeBalanceDebit
+//
+//    If (dDate = '') Function_Return 0 // Needs a date
+//    
+//    Hold_Place GLCHART
+//    Hold_Place TRANSACT
+//    Move FieldIndex to Hold_FieldIndex // Hold present field index before using
+//    Move 0  to nTotal
+//    Move dDate to dEndDate
+//    Move (Get_First_Of_Month(dEndDate)) to dStartDate
+//    Subtract 1 from dStartDate
+//    Move (DateGetMonth(dStartDate)) to iMonth
+//    Move (DateGetYear(dStartDate)) to iYear
+//    Add 1 to dStartDate
+//    // For now, do not use the prior year trx totals on the glchart.
+//    // Until the year forward is proven (grnteed to be update correctly),
+//    // we will accumulate total trx by all years forward up to the day before
+//    // this month.
+//    Clear GLCHART
+//    Move iAcct to GLCHART.ACCOUNT#
+//    Find GE GLCHART by Index.1
+//    If (Found) Move (GLCHART.ACCOUNT# = iAcct) to Found
+//    If (Found) Move (GLCHART.YEAR <= iYear) to Found
+//    While (Found)
+//        Move (GLCHART.DEBIT_CREDIT = 'D') to bComputeBalanceDebit // Will use this later
+//        For FieldIndex from 00 to 11 // Loop to accumulate activity for balance
+//            If (GLCHART.YEAR < iYear) Begin // we are scanning a prior year
+//                Add GLCHART.BALANCE_1& to nTotal // Accumulate for balance
+//            End // Prior year block
+//            Else Begin // We are in this year and should stop on month prior
+//                If (FIELDINDEX < iMonth) Begin
+//                    Add GLCHART.BALANCE_1& to nTotal // Accumulate for balance
+//                End // Prior month of this year block
+//            End // This year special block
+//        Loop // Accumulate transaction totals
+//        Find gt GLCHART by Index.1
+//        If (Found) Move (GLCHART.ACCOUNT# = iAcct) to Found
+//        If (Found) Move (GLCHART.YEAR <= iYear) to Found
+//    Loop // While
+//    // We now have a balance from all years upto last day of the month
+//    // prior to given date.  Now accumulate items for this month.
+//    Clear TRANSACT
+//    Move iAcct      to TRANSACT.ACCOUNT#
+//    Move dStartDate to TRANSACT.TRX_DATE // Begin with first of new mo.
+//    Find ge TRANSACT by Index.1
+//    If (Found) Move (TRANSACT.ACCOUNT# = iAcct) to Found
+//    If (Found) Move (TRANSACT.TRX_DATE >= dStartDate) to Found
+//    If (Found) Move (TRANSACT.TRX_DATE <= dEndDate) to Found
+//    While (Found)
+//        If (bComputeBalanceDebit) Begin
+//            If (TRANSACT.DEBIT_CREDIT = 'D') Begin
+//                Add TRANSACT.TRX_AMOUNT to nTotal
+//            End
+//            Else Begin
+//                Subtract TRANSACT.TRX_AMOUNT from nTotal
+//            End
+//        End // Debit account block
+//        Else Begin
+//            If (TRANSACT.DEBIT_CREDIT = 'C') Begin
+//                Add TRANSACT.TRX_AMOUNT to nTotal
+//            End
+//            Else Begin
+//                Subtract TRANSACT.TRX_AMOUNT from nTotal
+//            End
+//        End // Credit account block
+//        Find gt TRANSACT by Index.1
+//        If (Found) Move (TRANSACT.ACCOUNT# = iAcct) to Found
+//        If (Found) Move (TRANSACT.TRX_DATE >= dStartDate) to Found
+//        If (Found) Move (TRANSACT.TRX_DATE <= dEndDate) to Found
+//    Loop // While
+//    Move Hold_FieldIndex to FieldIndex
+//    Return_to_place TRANSACT
+//    Return_to_place GLCHART
+//    Function_Return (nTotal)
+//End_Function
+
+// From Johan B of FrontIoT March 2022
+
+// sCmd - V: verify, C: create
+Function FolderManager Global String sPath String sCmd Returns Boolean
+    String[] sFolderArr
+    String sTestPath
+    Integer iDepth
+    Boolean bExists
+
+    //Move (StrSplitToArray(sPath, '/')) to sFolderArr
+    //If (SizeOfArray(sFolderArr) < 2) 
+    Move (StrSplitToArray(sPath, '\')) to sFolderArr
+    
+    Move 1 to iDepth
+    Move sFolderArr[0] to sTestPath
+
+    If (Mid(sTestPath, 1, 2) <> ':') ; // Don't test the drive letter for now! DF 19.1 bug on 4358
+        File_Exist (sTestPath)  bExists
+    Else ;
+        Move True to bExists
+// This is 'ignoring' of the intial drive letter is due to the 4358 RawFile Command error in DF19.1 that happens in some environments (like STUN)
+// Testing for C: this way throws error 4358 'DFERR_RAWFILE_ERROR'
+// A good way to overcome the failing test for a drive letter would be to just ignore it here
+// Move True to bOK  
+// // Save the state of the global variables to restore them later...
+// Move Err to bErr
+// Move LastErr to iLastErr        
+// Move False to Err
+// Send Ignore_Error of Error_Object_Id DFERR_RAWFILE_ERROR
+// Remove_Directory sFolder
+// Send Trap_Error of Error_Object_Id DFERR_RAWFILE_ERROR
+// If (Err = True) Begin
+//     Move False to Err   
+//     Move iLastErr to LastErr
+//     Move False to bOK
+// End 
+// Function_Return bOK  
+// This would ignore the error but still give us an indication the drive letter is not valid
+// But for now, we will just ignore the intial drive letter
+
+    If (not(bExists)) Make_Directory (sTestPath)
+
+    While (iDepth < (SizeOfArray(sFolderArr)-1))
+        Move (sTestPath + "\" + sFolderArr[iDepth]) to sTestPath
+
+        File_Exist (sTestPath)  bExists
+        If (not(bExists)) Begin
+            If (sCmd = "C") Begin
+                Make_Directory (sTestPath)
+            End
+            If (sCmd = "V") Begin
+                Function_Return False
+            End
+        End
+        Increment iDepth
+    Loop
+
+    Function_Return True
+End_Function
+
+Function ReadFileGeneric Global String sFilePath Returns String
+    Integer iChannel
+    String sHomeDir sData sBuffer sFullFilePath sCr
+    Handle hoWorkSpace
+
+    Get phoWorkspace of ghoApplication to hoWorkspace
+    Get psHome of hoWorkspace to sHomeDir
+    Move (sHomeDir - sFilePath) to sFullFilePath
+
+    Move (Seq_New_Channel()) to iChannel
+    If (iChannel=DF_SEQ_CHANNEL_NOT_AVAILABLE) Function_Return ""
+
+    Direct_Input channel iChannel sFullFilePath
+    If (not(SeqEof)) Begin
+        Repeat
+            Readln channel iChannel sBuffer
+            Move (sData+sCr+sBuffer) to sData
+            Move (Character(10)) to sCr
+        Until (SeqEof)
+    End
+    Else Move ("File not found: " + sFilePath) to sData
+    
+    Close_Input channel iChannel
+
+    Function_Return sData
+End_Function
+
+// sType: W (creating a new file and write), A (create if not exist and append)
+Procedure WriteFileGeneric Global String sFilePath String sText String sType
+    String sHomeDir sFullFilePath
+    Integer iChannel
+    Handle hoWorkSpace
+    Boolean bOk
+    
+    Move (Seq_New_Channel()) to iChannel
+    If (iChannel=DF_SEQ_CHANNEL_NOT_AVAILABLE) Procedure_Return False
+    
+    If (not(sFilePath contains '\')) Begin 
+        // If there is no path in the FilePath then use the home folder
+        Get phoWorkspace of ghoApplication to hoWorkSpace
+        Get psHome of hoWorkSpace to sFullFilePath
+        Move (sFullFilePath - sFilePath) to sFullFilePath
+    End
+    Else ;
+        Move sFilePath to sFullFilePath
+    
+    Get FolderManager sFullFilePath "C" to bOk // Could use 'C' for create
+    
+    If (num_arguments = 2) Move 'A' to sType
+    If (sType = 'W') Direct_Output channel iChannel sFullFilePath
+    If (sType = 'A') Append_Output channel iChannel sFullFilePath
+    
+    Writeln channel iChannel sText
+    
+    Close_Output channel iChannel
+    Send Seq_Release_Channel iChannel
+    
+    Procedure_Return True
+End_Procedure
+
+Procedure DebugLog Global String sType String sMessage
+    String sCr sIP sUserAgent sUsername sMailBody sLoginName sStack
+    Move (Character(10)) to sCr
+    
+    Move (sType + ': ' + sMessage) to sMailBody
+    
+    CallStackDump sStack
+    Move (sMailBody + sCr + sCr + 'Trace: ' + sStack) to sMailBody
+    
+    Move (sMailBody + sCr + sCr + 'Date: ' + String(CurrentDateTime())) to sMailBody
+    
+    #IFDEF IS$WEBAPP
+        Get psUsername of oSessionManager to sUsername
+        Get psLoginName of oSessionManager to sLoginName
+        Move (sMailBody + sCr + 'User: ' + sLoginName + ' (' + sUsername + ')') to sMailBody
+        
+        Get ServerVariable of ghoWebServiceDispatcher "HTTP_USER_AGENT" to sUserAgent
+        Move (sMailBody + sCr + 'Browser: ' +  sUserAgent) to sMailBody
+        
+        Get ServerVariable of ghoWebServiceDispatcher "HTTP_X_FORWARDER_FOR" to sIP
+        If (sIP = "" or Lowercase(sIP) = "unknown") Begin
+            Get ServerVariable of ghoWebServiceDispatcher "REMOTE_ADDR" to sIP
+        End
+        Move (sMailBody + sCr + 'IP: ' +  sIP) to sMailBody
+        
+    #ELSE
+        //Get psUsername of oSessionManager to sUsername
+        Move (sMailBody + sCr + 'User: Server') to sMailBody
+        
+        Move "Windows application" to sUserAgent
+        Move (sMailBody + sCr + 'Browser: DataFlex') to sMailBody
+        
+        Move (sMailBody + sCr + 'IP: 127.0.0.1') to sMailBody
+        
+    #ENDIF
+    
+    Send WriteFileGeneric 'debug.log' (sMailBody + sCr + '----------------------------------------------') 'A'
+    
+    If (sType <> 'INFO') Begin
+        // Send mail here
+    End
+    
+End_Procedure
+
+
+Function is_whitespace Global String pChar Returns Boolean
+  If (pChar = character(13)) Function_Return (True)
+  If (pChar = character(10)) Function_Return (True)
+  If (pChar = character(32)) Function_Return (True)
+  If (pChar = character(8))  Function_Return (True)
+  Function_Return (False)
+End_Function
+  
+Function Readword_String Global String sInput Returns String
+  String mr_str lcChar
+  Integer liPosition liMaxLen liDebug
+
+  Move (Length(sInput)) to liMaxLen
+  Move 1 to liPosition // Start at the beginning of the string
+  Move (Mid(sInput, 1, liPosition)) to lcChar // Look at the single char
+
+  Move (Ascii(lcChar)) to liDebug // Only for debugging
+
+  If (is_whitespace(lcChar)) Begin
+    Function_Return (lcChar)
+  End
+  Else Begin
+    Append mr_str lcChar
+    Repeat
+        Increment liPosition
+        Move (Mid(sInput, 1, liPosition)) to lcChar
+        If (not(is_whitespace(lcChar))) Begin
+            Append mr_str lcChar
+        End
+    Until ((is_whitespace(lcChar)) or liPosition > liMaxLen)
+    Function_Return (mr_str)
+  End
+End_Function
+
+Function Wordwrap_String Global String sInput Integer iMargin Returns String
+    String[] Word_List Blank_List
+    String lsBuffer lcChar lsWord lsLine sOutput
+    Integer liPosition
+
+    // Read the input string into an array of words
+    Move Blank_List to Word_List // Clear the word list from prior uses
+    While (Length(sInput) > 0)
+        Move (Readword_String(sInput)) to lsWord
+        If (Length(lsWord) > 0) Begin
+            Move lsWord to Word_List[liPosition]
+            Move (Right(sInput, Length(sInput) - Length(lsWord))) to sInput // Strip off leading word just read
+        End
+        Increment liPosition
+    Loop
+
+    // We should now have the word_list filled with each word (and each whitespace) from the input string
+    Move '' to sOutput
+    If (iMargin = 0) Begin
+        For liPosition from 0 to (SizeOfArray(Word_List) - 1)
+            Move (Word_List[liPosition]) to lsWord
+            If (Length(lsWord) = 1) Begin
+                If (lsWord = Character(10)) Begin
+                    // This is just a line feed character so just ignore it
+                End
+                Else If (lsWord = Character(13)) Begin
+                    // This is just a CR so replace it with a space
+                    Move (sOutput + ' ') to sOutput
+                End
+                Else Begin
+                    Move (sOutput + lsWord) to sOutput
+                End
+            End
+            Else Begin
+                Move (sOutput + lsWord) to sOutput
+            End
+        Loop
+    End // iMargin 0 
+    Else Begin
+        Move '' to lsLine
+        Move 0 to liPosition
+        For liPosition from 0 to (SizeOfArray(Word_List) - 1)
+            Move (Word_List[liPosition]) to lsWord
+            If (Length(lsWord) = 1) Begin
+                If (lsWord = Character(10)) Begin
+                    // This is a carriage return character
+                    Move (sOutput + lsLine + character(13) + Character(10)) to sOutput
+                    Move '' to lsLine
+                End
+                Else If (lsWord = Character(13)) Begin
+                    // This is just a line feed character so just ignore it (we processed the C/R already)
+                End
+                Else Begin
+                    Append lsLine lsWord
+                End
+            End
+            Else Begin
+                If ((Length(lsLine) + Length(lsWord)) > iMargin) Begin
+                    // Won't fit so dump the line
+                    Move (sOutput + lsLine + character(13) + Character(10)) to sOutput
+                    Move '' to lsLine
+                End
+                Append lsLine lsWord
+            End
+        Loop // while
+        If (Length(lsLine) >= 1) begin
+            Move (sOutput + lsLine + character(13) + Character(10)) to sOutput // Output the final line being assembled
+            Move '' to lsLine
+        End
+    End // 1 to 255 iMargin
+    Function_Return sOutput
+End_Function
+
+
+//Function Push_NOTES_to_string Global String sFile ;
+//                                     String sReference ;
+//                                     Returns String
+//    String sOutput
+//    String[][] sResultSet
+//    String sSQLQuery
+//    Integer iRows
+//    
+//
+//    Move '' to sOutput
+//    Move ("select [COMMENT] from" * Qualified_Database_Name(NOTES.File_number)) to sSQLQuery
+//    Move (sSQLQuery + " where [FILE#] = '" + String(sFile) + "'") to sSQLQuery
+//    Move (sSQLQuery + " and [REFERENCE#] = '" + String(sReference) + "'") to sSQLQuery 
+//    Move (sSQLQuery + " order by [SEQ#]") to sSQLQuery 
+//
+//    Send Execute_Native_SQL (&sResultSet) sSQLQuery
+//
+//    If (SizeOfArray(sResultSet) > 0) Begin 
+//        For iRows from 0 to (SizeOfArray(sResultSet) - 1) // 1 Column
+//            Move (sOutput + String(sResultSet[iRows][0]) + Character(13) + Character(10)) to sOutput
+//        Loop
+//    End
+////    SQL_SET_STMT    to ("select [COMMENT] from" * Qualified_Database_Name(NOTES.File_number))
+////    SQL_APPEND_STMT to (" where [FILE#] = '" + String(sFile) + "'")
+////    SQL_APPEND_STMT to (" and [REFERENCE#] = '" + String(sReference) + "'")
+////    SQL_APPEND_STMT to (" order by [SEQ#]")
+////    SQL_PREPARE_STMT
+////    SQL_EXECUTE_STMT
+////    SQL_FETCH_NEXT_ROW into sParam1
+////    While (Found)
+////        Move (sOutput + String(sParam1) + Character(13) + Character(10)) to sOutput
+////        SQL_FETCH_NEXT_ROW into sParam1
+////    End // While
+////    SQL_CANCEL_QUERY_STMT
+//    Function_Return sOutput
+//End_Procedure
+
+
+//Register_Object oTextEdit
+//Function Popup_TextEdit Global ;
+//                        String sData ;
+//                        String sLabel ;
+//                        Integer iRightMargin ;
+//                        Integer iMaxLines ;
+//                        Returns String
+//    String sRtnVal
+//
+//    Set psTextDescription       of oTextEdit to sLabel 
+//    Set piMaxChars of oTextEdit to iRightMargin
+//    Set psTextData of oTextEdit to sData
+//    Set piMaxLines of oTextEdit to iMaxLines
+//    Set Size of oTextEdit to 177 ((iRightMargin * 5.35) + 16) // Set the size before we pop it up
+//    Send Popup_Modal of oTextEdit
+//    Get psTextData of oTextEdit to sRtnVal
+//    Move (Wordwrap_String(sRtnVal, iRightMargin)) to sRtnVal // Will now be broken by lines with word wrapping
+//    Function_Return sRtnVal   
+//End_Function
+
+Function Wrap_CSV_fieldtype Global String sInput Returns String
+    String sRtnVal
+
+    If (Is_Number(sInput)) ;
+        Move sInput to sRtnVal
+    Else Begin
+        If (sInput contains '"') ;
+            Move ("'" + String(sInput) + "'") to sRtnVal // Surround double quote field with single quotes
+        Else If (sInput contains "'") ;
+            Move ('"' + String(sInput) + '"') to sRtnVal // Surround single quote field with double quotes
+        Else ;
+            Move ('"' + String(sInput) + '"') to sRtnVal // Default to double quoted string            
+    End
+    Function_Return sRtnVal
+End_Function
+
+
+Function Set_default_value_from_property Global String sProperty String sDefault Returns String
+    String sRtnVal
+    
+    If (sProperty <> '') ;
+        Move sProperty to sRtnVal
+    Else ;
+        Move sDefault to sRtnVal
+    Function_Return sRtnVal
+End_Function
+
+
+//Function Set_default_value_from_property_settings Global String sProperty String sProgram String sKey String sDefault Returns String
+//    String sRtnVal
+//    
+//    If (sProperty <> '') ;
+//        Move sProperty to sRtnVal
+//    Else ;
+//        Move (ReadSettings1(oEQX_Settings, '*', "EQX", sProgram, sKey, sDefault)) to sRtnVal
+//    Function_Return sRtnVal
+//End_Function
+//
+//
+//Function Set_default_boolean_from_property Global String sProperty Boolean bDefault Returns Boolean
+//    Boolean bRtnVal
+//    
+//// The 'contains' version was crashing for some unknown reason and was changed to a Case structure Dec 2023
+////        Move ("|1|ON|YES|Y|TRUE|T|" contains ('|' + uppercase(sProperty) + '|')) to bRtnVal
+//    Case Begin
+//        Case (Uppercase(sProperty) = 'Y')
+//            Move True to bRtnVal
+//            Case Break
+//        Case (Uppercase(sProperty) = 'T')
+//            Move True to bRtnVal
+//            Case Break
+//        Case (Uppercase(sProperty) = "ON")
+//            Move True to bRtnVal
+//            Case Break
+//        Case (Uppercase(sProperty) = "YES")
+//            Move True to bRtnVal
+//            Case Break
+//        Case (Uppercase(sProperty) = "TRUE")
+//            Move True to bRtnVal
+//            Case Break
+//        Case (Uppercase(sProperty) = "1")
+//            Move True to bRtnVal
+//            Case Break
+//        Case (Uppercase(sProperty) = 'N')
+//            Move False to bRtnVal
+//            Case Break
+//        Case (Uppercase(sProperty) = 'F')
+//            Move False to bRtnVal
+//            Case Break
+//        Case (Uppercase(sProperty) = "OFF")
+//            Move False to bRtnVal
+//            Case Break
+//        Case (Uppercase(sProperty) = "NO")
+//            Move False to bRtnVal
+//            Case Break
+//        Case (Uppercase(sProperty) = "FALSE")
+//            Move False to bRtnVal
+//            Case Break
+//        Case (Uppercase(sProperty) = "0")
+//            Move False to bRtnVal
+//            Case Break
+//        Case Else
+//            Move bDefault to bRtnVal
+//    Case End
+//
+//    Function_Return bRtnVal
+//End_Function
+
+
+Function Prepend_Temp_Folder_Path Global String sFileName Returns String
+    String sDataPath
+
+    Get_Environment "TEMP" to sDataPath // Local windows temp folder
+    If (Right(sDataPath, 1) <> Sysconf(SYSCONF_DIR_SEPARATOR)) Begin
+        Move (sDataPath - Sysconf(SYSCONF_DIR_SEPARATOR)) to sDataPath
+    End
+    Function_Return (sDataPath - sFileName)
+End_Procedure
+
+
+Function ConvertDMSToDD Global Integer iDegrees Integer iMinutes Integer iSeconds String sDirection Returns Number
+    Real nRtnVal
+
+    Move (Real(iDegrees) + Real(Real(iMinutes)/60.0) + Real(Real(iSeconds)/(60.0*60.0))) to nRtnVal
+    If (Uppercase(sDirection = 'S') or Uppercase(sDirection) = 'W') ;
+        Move (nRtnVal * -1.0) to nRtnVal
+    Function_Return nRtnVal
+End_Function
+
+
+Function Safe_Delete Global Integer iFileNo ;
+                            Returns Integer
+  Integer iFieldCount iTempInt iOutChannel iHoldFieldindex iErrorStat iChannel
+  String sTempVal sFileName
+
+  // This function will output a record to the file FileName.DEL and then delete the record from FileName
+  // The file FileName.DEL is not being forced to be in the data directory of the file yet.
+  // It does not use the DDO (but it may be a good idea to add this option)
+  If (iFileNo = 0) Begin
+     Send UserError ("COULD NOT DELETE FROM UNKNOWN FILE" * iFileNo) "Program Error"
+     Move 1 to iErrorStat
+     End
+  Else Begin
+     Get_Attribute DF_FILE_STATUS of iFileNo to iTempInt
+     If iTempInt NE DF_FILE_ACTIVE Begin
+        Send UserError ("NO ACTIVE RECORD FOUND TO DELETE IN FILE" * iFileNo) "Logic Error"
+        Move 2 to iErrorStat
+        End
+     Else Begin
+        Get_Attribute DF_FILE_NUMBER_FIELDS of iFileNo to iFieldCount
+        Get_Attribute DF_FILE_LOGICAL_NAME  of iFileNo to sFileName
+
+        Move (Seq_New_Channel()) to iChannel
+        Append_Output channel iChannel (trim(sFileName) + ".DEL")
+        Move FIELDINDEX to iHoldFieldindex
+        For FIELDINDEX from 1 to iFieldCount
+            Get_Field_Value iFileNo FIELDINDEX to sTempVal
+            If (FIELDINDEX = 1) Write '"'
+            Else                Write ',"'
+            Write (trim(sTempVal)) '"'
+        Loop
+        Writeln
+        Move iHoldFieldindex to FIELDINDEX // Return existing value
+   
+        // Now remove the record from the calling table
+        Delete iFileNo     
+        Close_Output channel iChannel
+        Send Seq_Release_Channel iChannel
+        End
+     End
+  Function_Return (iErrorStat)
+End_Function
+
+
+Enum_List
+    Define eTripBeginDate
+    Define eTripEndDate
+End_Enum_List
+
+//Function Rpad_With Global String in_str Integer iLen String sChar Returns String
+//    String sTemp
+//
+//    Move (Trim(in_str)) to sTemp // Right and Left trim first
+//    While (Length(sTemp) < iLen)
+//        Move (sTemp + sChar) to sTemp // Append sChar(s) until it is the correct length
+//    Loop
+//    Function_Return (sTemp)
+//End_Function
+//
+//Function Rpad_char Global String  sStr ;
+//                          String  sChar ;
+//                          Integer ilen ;
+//                          Returns String
+//  String lsTemp
+//
+//  // First right and left trim the source before padding (different than Waltmacs LPAD command!)
+//  Move (Trim(sStr)) to lsTemp
+//  If (length(lsTemp) < ilen) Begin
+//     Move (Rpad_With(lsTemp, ilen, sChar)) to lsTemp // Only if it is short.  Otherwise, even if long, just send it back trimmed
+//  End
+//  Function_Return (lsTemp)
+//End_Function
+
+Procedure WriteBlock Global String sData Integer iLength
+    String sTemp
+
+    Move (Trim(sData)) to sTemp // Strip spaces
+    If (Length(sTemp) > iLength) ; // Too long
+        Move (Left(sTemp, iLength)) to sTemp
+    Else Begin
+        While (Length(sTemp) < iLength) // Too short
+            Move (sTemp + ' ') to sTemp // Append sChar(s) until it is the correct length
+        End // WHile
+    End
+    Write sTemp // Now the correct length
+End_Procedure
+
+Procedure WriteBlockRight Global String sData Integer iLength
+    String sTemp
+
+    Move (Trim(sData)) to sTemp // Strip spaces
+    While (Length(sTemp) < iLength)
+        Move (' ' + sTemp) to sTemp // Insert sChar(s) until it is the correct length
+    End // WHile
+    Write sTemp // Now the correct length
+End_Procedure
+
+Procedure WriteBlockTab Global String sData Integer iLength
+    Send WriteBlock sData iLength
+    Write (Character(009)) // Tab char
+End_Procedure
+
+Procedure WriteADSDate Global Date dDate
+    String sTemp
+   
+    Move (Right(DateGetYear(dDate), 2)) to sTemp
+    If (Length(sTemp) < 2) ;
+        Move ('0' - sTemp) to sTemp
+    Write sTemp '/'
+    Move (DateGetMonth(dDate)) to sTemp
+    If (Length(sTemp) < 2) ;
+        Move ('0' - sTemp) to sTemp
+    Write sTemp '/'
+    Move (DateGetDay(dDate)) to sTemp
+    If (Length(sTemp) < 2) ;
+        Move ('0' - sTemp) to sTemp
+    Write sTemp
+    Write (Character(009)) // Tab char
+End_Procedure
+
+Procedure WriteADSNumber Global Number nData Integer iLength
+  // Parameters: !1 - Number to output AS ###.99
+  //             !2 - Length of output
+  // Changed due to large number errors. Should not need to round.
+    Number ntemp
+    String sTemp
+    
+    If (abs(nData) < 1000000) Begin
+        Move (Number(round(Number(nData * 100.0))) / 100.0) to ntemp // 2 decimal precision
+    End
+    Else Begin
+        Move nData to ntemp
+    End
+    Move (Decimal_pad(ntemp)) to sTemp
+    Send WriteBlockRight sTemp iLength
+    Write (Character(009)) // Tab char
+End_Procedure
+

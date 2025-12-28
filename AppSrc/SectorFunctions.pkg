@@ -1867,6 +1867,88 @@ End_Function
 //End_Function
 
 
+// From DF forums: https://support.dataaccess.com/Forums/showthread.php?70865-JSON-REST-Blank-Elements&highlight=STRUCT+JSON
+// https://docs.dataaccess.com/dataflexhelp/#t=mergedProjects%2FVDFClassRef%2FcJsonObject-Function-MemberJsonType.htm
+Procedure RemoveNullJSONMembers Handle hoJsonObj ;
+                                Boolean bEmptyString ;
+                                Boolean bZeroNumber ;
+                                Boolean bNull
+    Integer iTo iMember iType iSOA
+    Handle hoMember
+    String sMemberName
+    Boolean bRemove
+    
+    Get MemberCount of hoJsonObj to iTo
+    For iMember from 0 to (iTo - 1)
+        Move False to bRemove
+        Get MemberByIndex of hoJsonObj iMember to hoMember
+        Get JsonType of hoMember to iType
+        Case Begin
+            Case (iType = jsonTypeString)
+                Move (JsonValue(hoMember) = "null") to bRemove
+                Case Break
+            // Other case groups here for non-string nulls which may be added in the future
+            Case (iType = jsonTypeObject or iType = jsonTypeArray) Begin
+                Send RemoveNullJSONMembers hoMember bEmptyString bZeroNumber bNull // Recursive call
+                Get MemberCount of hoMember to iSOA
+                Move (iSOA=0) to bRemove // This removes any 'empty' arrays
+                Case Break
+            End
+        Case End
+        
+        // Recursive end condition
+        If (bRemove) Begin
+            If (iType <> jsonTypeObject) Begin
+                // Quick fix to not remove arrays with no elements object..
+                // ToDo: Work out how to remove an empty array object. Maybe by index instead of name?
+                Get MemberNameByIndex of hoJsonObj iMember to sMemberName
+                Send RemoveMember of hoJsonObj sMemberName
+            End
+            Decrement iMember
+            Decrement iTo
+        End
+
+        Send Destroy of hoMember
+    Loop
+End_Procedure
+
+// Recursively removes members that are null or empty strings. Gemini AI 12/28/2025
+Procedure StripEmptyMembers Handle hoJson
+    Integer iCount iIndex eType
+    Handle hoMember
+    String sMemberName sValue
+
+    Get MemberCount of hoJson to iCount
+    // Loop backwards because we are potentially removing members
+//    For iIndex from (iCount - 1) down to 0
+    Move (iCount - 1) to iIndex
+    While (iIndex > 0) // Change to while loop since there is no 'down' for loop in DF
+        Get MemberByIndex of hoJson iIndex to hoMember
+        Get JsonType of hoMember to eType
+        
+        // If it's a nested object or array, clean it first
+        If (eType = jsonTypeObject or eType = jsonTypeArray) Begin
+            Send StripEmptyMembers hoMember
+            // If the object/array is now empty, you might want to remove it too
+            If (MemberCount(hoMember) = 0) Begin
+                Send RemoveMember of hoJson iIndex
+            End
+        End
+        Else Begin
+            Get JsonValue of hoMember to sValue
+//            Get MemberNameByIndex of hoMember iIndex to sMemberName
+            // Suppress if Null or Empty String
+            If (eType = jsonTypeNull or sValue = "null") Begin
+                Send RemoveMember of hoJson iIndex
+            End
+        End
+        
+        Send Destroy of hoMember
+        Decrement iIndex
+    Loop
+End_Procedure
+
+
 Function Prepend_Temp_Folder_Path Global String sFileName Returns String
     String sDataPath
 

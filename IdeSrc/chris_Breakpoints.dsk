@@ -1,0 +1,14 @@
+[C:\Projects\Scanner\AppSrc\Amadeus.pkg]
+Source177=For iRow from 30 to (SizeOfArray(saRecordFields) - 1) // 1 or more NSPNR sets. Always at least 1 that may be blank
+ConditionEnabled177=0
+Condition177= 
+177=1
+[C:\Projects\Scanner\AppSrc\SectorFunctions.pkg]
+Source1891=Send RemoveNullJSONMembers hoMember bEmptyString bZeroNumber bNull // Recursive call
+ConditionEnabled1891=0
+Condition1891= 
+1891=1
+Source1940=If (eType = jsonTypeNull or sValue = "null") Begin
+ConditionEnabled1940=0
+Condition1940= 
+1940=1

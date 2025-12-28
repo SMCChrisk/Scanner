@@ -12,6 +12,11 @@ Struct tBLKMessageHeader // Block Message Header Segment
     String  sTOTBLK // Total Number of blocks containing AIR (char 3)
 End_Struct
 
+Struct tNSPNR // National System PNR
+    String  sNSAIR      // National System Airline Code (Char 3)
+    String  sNSRECLOC   // National System PNR record locator (Char 7)
+End_Struct
+
 Struct tAIRHeader // AMD - AIR Record Header
     String  sMSGTAG   // Message Tag (AMD) (char 3)
     String  sRETRANS  // Retransmitted Record Indicator (R=Retransmitted, blanks If not used) (char 1)
@@ -23,9 +28,9 @@ Struct tAIRHeader // AMD - AIR Record Header
     String  sDATE     // Date when voided (DDMMM) (char 5)
     String  sAGTSIN   // Agent Sign that voided AIR (Sine = Initials and Duty Code) (system void = "****") (char 4)
     // CR
-    String  sNETID    // The network identifier (Char 2)
-    String  sADDRTKT  // Identifier of the terminal requesting the ticket (Num 8)
-    String  sNETIDBOS // The network identifier (for back offices purposes) (Char 2)
+    String  sNETID      // The network identifier (Char 2)
+    String  sADDRTKT    // Identifier of the terminal requesting the ticket (Num 8)
+    String  sNETIDBOS   // The network identifier (for back offices purposes) (Char 2)
     Integer iADDRTKTBOS // The identifier of the terminal activating the a.I.R. (for back offices purposes) (Num 8)
     String  sIDENTBOS   // Back Office a.I.R. destination office (Char 9)
     String  sBOSTYPE    // a.I.R. destination type: BOS type as to list defined in A02AIRT4. (Char 3)
@@ -64,15 +69,20 @@ Struct tAIRHeader // AMD - AIR Record Header
     String  sACCTNUM    // Agency Client Account Number (Char 10)
     String  sORDNUM     // Order Number (Char 10)
     String  sERSP       // ERSP of booking agency (Num 8)
-//    String  sNSPNR      // National System PNR. (Char 28)
-    String  sNSAIR      // National System Airline Code (Char 3)
-    String  sNSRECLOC   // National System PNR record locator (Char 7)
+    tNSPNR[]  taNSPNRs  // National System PNR. (Char 28?)
 End_Struct
 
 Struct tAmadeusAIR
     tBLKMessageHeader BLKMessageHeader
     tAIRHeader AIRHeader
 End_Struct
+
+Function NullIfBlank Global String sInput Returns String
+    If (Trim(sInput) = '') ;
+        Function_Return "null"
+    Else ;
+        Function_Return sInput
+End_Function
 
 Function ParseBLKHeader Global String[] sInputRecord tAmadeusAIR ByRef AmadeusAIR Returns Boolean
     Boolean bSuccess
@@ -82,19 +92,20 @@ Function ParseBLKHeader Global String[] sInputRecord tAmadeusAIR ByRef AmadeusAI
     Move (StrSplitToArray(sInputRecord[0], AMADEUS_DELIMITER)) to saRecordFields
     Move (SizeOfArray(saRecordFields) = 7) to bSuccess
     If (bSuccess) Begin
-        Move (right(saRecordFields[0], 3)) to AmadeusAIR.BLKMessageHeader.sAIRVER
-        Move (saRecordFields[1])           to AmadeusAIR.BLKMessageHeader.sAIROPT
-        Move (saRecordFields[4])           to AmadeusAIR.BLKMessageHeader.sTRANNUM
-        Move (left(saRecordFields[5], 2))  to AmadeusAIR.BLKMessageHeader.sNETID
-        Move (mid(saRecordFields[5], 8, 3)) to AmadeusAIR.BLKMessageHeader.sADDR
-        Move (left(saRecordFields[6], 3))   to AmadeusAIR.BLKMessageHeader.sBLKNUM
-        Move (mid(saRecordFields[6], 3, 4)) to AmadeusAIR.BLKMessageHeader.sTOTBLK
+        Move (NullIfBlank(right(saRecordFields[0], 3)))  to AmadeusAIR.BLKMessageHeader.sAIRVER
+        Move (NullIfBlank(saRecordFields[1]))            to AmadeusAIR.BLKMessageHeader.sAIROPT
+        Move (NullIfBlank(saRecordFields[4]))            to AmadeusAIR.BLKMessageHeader.sTRANNUM
+        Move (NullIfBlank(left(saRecordFields[5], 2)))   to AmadeusAIR.BLKMessageHeader.sNETID
+        Move (NullIfBlank(mid(saRecordFields[5], 8, 3))) to AmadeusAIR.BLKMessageHeader.sADDR
+        Move (NullIfBlank(left(saRecordFields[6], 3)))   to AmadeusAIR.BLKMessageHeader.sBLKNUM
+        Move (NullIfBlank(mid(saRecordFields[6], 3, 4))) to AmadeusAIR.BLKMessageHeader.sTOTBLK
     End
 
     Function_Return (bSuccess)
 End_Function
 
 Function ParseAIRHeader Global String[] sInputRecord tAmadeusAIR ByRef AmadeusAIR Returns Boolean
+    Integer iRow iPtr
     Boolean bSuccess
     String[] saTemp
     String[] saRecordFields
@@ -102,83 +113,88 @@ Function ParseAIRHeader Global String[] sInputRecord tAmadeusAIR ByRef AmadeusAI
     Move (StrSplitToArray(sInputRecord[0], AMADEUS_DELIMITER)) to saRecordFields // AMD record
     Move (SizeOfArray(saRecordFields) >= 3) to bSuccess // May have 3 or 4
     If (bSuccess) Begin
-        Move (left(saRecordFields[0], 3))   to AmadeusAIR.AIRHeader.sMSGTAG
-        Move (mid(saRecordFields[0], 1, 4)) to AmadeusAIR.AIRHeader.sRETRANS
-        Move (mid(saRecordFields[0], 2, 6)) to AmadeusAIR.AIRHeader.sDOM
-        Move (mid(saRecordFields[0], 8, 6)) to AmadeusAIR.AIRHeader.sAIRSEQ
+        Move (NullIfBlank(left(saRecordFields[0], 3)))   to AmadeusAIR.AIRHeader.sMSGTAG
+        Move (NullIfBlank(mid(saRecordFields[0], 1, 4))) to AmadeusAIR.AIRHeader.sRETRANS
+        Move (NullIfBlank(mid(saRecordFields[0], 2, 6))) to AmadeusAIR.AIRHeader.sDOM
+        Move (NullIfBlank(mid(saRecordFields[0], 8, 6))) to AmadeusAIR.AIRHeader.sAIRSEQ
         Move (StrSplitToArray(saRecordFields[1], '/')) to saTemp
-        Move (saTemp[0])                    to AmadeusAIR.AIRHeader.iAIRSEC
-        Move (saTemp[1])                    to AmadeusAIR.AIRHeader.iAIRTOTAL
-        Move (left(saRecordFields[2], 4))   to AmadeusAIR.AIRHeader.sACTTAG
-        Move (mid(saRecordFields[2], 5, 5)) to AmadeusAIR.AIRHeader.sDATE
+        Move (NullIfBlank(saTemp[0]))                    to AmadeusAIR.AIRHeader.iAIRSEC
+        Move (NullIfBlank(saTemp[1]))                    to AmadeusAIR.AIRHeader.iAIRTOTAL
+        Move (NullIfBlank(left(saRecordFields[2], 4)))   to AmadeusAIR.AIRHeader.sACTTAG
+        Move (NullIfBlank(mid(saRecordFields[2], 5, 5))) to AmadeusAIR.AIRHeader.sDATE
         If (SizeOfArray(saRecordFields) > 3) ;
-            Move (saRecordFields[3])        to AmadeusAIR.AIRHeader.sAGTSIN
+            Move (NullIfBlank(saRecordFields[3]))        to AmadeusAIR.AIRHeader.sAGTSIN
     End
 
     Move (StrSplitToArray(sInputRecord[1], AMADEUS_DELIMITER)) to saRecordFields // Next line
     Move (SizeOfArray(saRecordFields) >= 2) to bSuccess // May have 3
     If (bSuccess) Begin
-        Move (left(saRecordFields[0], 2))   to AmadeusAIR.AIRHeader.sNETID
-        Move (Mid(saRecordFields[0], 8, 3)) to AmadeusAIR.AIRHeader.sADDRTKT 
-        Move (saRecordFields[1])            to AmadeusAIR.AIRHeader.sIDENTBOS
+        Move (NullIfBlank(left(saRecordFields[0], 2)))   to AmadeusAIR.AIRHeader.sNETID
+        Move (NullIfBlank(Mid(saRecordFields[0], 8, 3))) to AmadeusAIR.AIRHeader.sADDRTKT 
+        Move (NullIfBlank(saRecordFields[1]))            to AmadeusAIR.AIRHeader.sIDENTBOS
         If (SizeOfArray(saRecordFields) > 2) ;
-            Move (saRecordFields[2])        to AmadeusAIR.AIRHeader.sBOSTYPE
+            Move (NullIfBlank(saRecordFields[2]))        to AmadeusAIR.AIRHeader.sBOSTYPE
     End
 
     Move (StrSplitToArray(sInputRecord[2], AMADEUS_DELIMITER)) to saRecordFields // MUC1A line
-    Move (SizeOfArray(saRecordFields) = 31) to bSuccess // Should have 31
+    Move (SizeOfArray(saRecordFields) >= 31) to bSuccess // Should have 31 to 33
     If (bSuccess) Begin
-        Move (Mid(saRecordFields[00], 06, 07)) to AmadeusAIR.AIRHeader.sRECLOC     // Record locator of PNR in GC (If temporary ticketing PNR then constant value of 'NOPNR') (Char 6)
-        Move (Mid(saRecordFields[00], 03, 13)) to AmadeusAIR.AIRHeader.sPNRENV     // PNR envelope Number (If temporary ticketing PNR, then constant value of 'blanks') (Num 3)
-        Move (Mid(saRecordFields[01], 02, 01)) to AmadeusAIR.AIRHeader.sTOTPSG     // Total Number of passengers in PNR (Num 2)
-        Move (Mid(saRecordFields[01], 02, 03)) to AmadeusAIR.AIRHeader.siAIRPSG    // Total Number of passengers in AIR (NB: Number of RPA lines for type ‘RA’) (Num 2)
-        Move (Mid(saRecordFields[01], 01, 05)) to AmadeusAIR.AIRHeader.sNHPNR      // Non Homogeneous PNR Indicator (N = Non Homogeneous PNR) (Char 1)
-        Move (saRecordFields[02])              to AmadeusAIR.AIRHeader.sIDBKG      // Amadeus Office ID of booking agency.For a description of the Amadeus Office Id please see Amadeus Office Identification (a-02-3204-AMD) (Char 9)
-        Move (saRecordFields[03])              to AmadeusAIR.AIRHeader.sBKGAGCY    // IATA Number of booking agency (Char 8)
-        Move (saRecordFields[04])              to AmadeusAIR.AIRHeader.sIDFIRST    // Amadeus Office ID of PNR first Owner. For a description of the Amadeus Office Id please see Amadeus Office Identification (A02OFP3204) (Char 9)
-        Move (saRecordFields[05])              to AmadeusAIR.AIRHeader.sOWNAGY     // IATA Number of PNR first owner (Char 8)
-        Move (saRecordFields[06])              to AmadeusAIR.AIRHeader.sIDENTCO    // Amadeus Office ID of current owner of PNR.For a description of the Amadeus Office Id please see Amadeus Office Identification (a-02-3204-AMD) (Char 9)
-        Move (saRecordFields[07])              to AmadeusAIR.AIRHeader.sCURAGCY    // IATA Number of current agency (Char 8)
-        Move (saRecordFields[08])              to AmadeusAIR.AIRHeader.sIDENTT     // Amadeus office ID of the ticketing agency. For more information see Amadeus Office Identification (a-02-3204-AMD) (Char 9)
-        Move (saRecordFields[09])              to AmadeusAIR.AIRHeader.sTKTAGCY    // IATA Number of Ticketing Agency (Char 8)
-        Move (saRecordFields[10])              to AmadeusAIR.AIRHeader.sOFFID      // Office Subdivision identifier (Char 2)
-        Move (saRecordFields[11])              to AmadeusAIR.AIRHeader.sCPNID      // Coupon Identifier (for a detailed description see A02-3277 Satellite Ticket Printing) (Char 15)
-        Move (saRecordFields[12]) to AmadeusAIR.AIRHeader.sIDENTT2    // Amadeus office ID of STP Site 1 For more information see Amadeus Office Identification (a-02-3204-AMD) (Char 9)
-        Move (saRecordFields[13]) to AmadeusAIR.AIRHeader.sTKTAGCY2   // IATA Number of STP Site 1 (Char 8)
-        Move (saRecordFields[14]) to AmadeusAIR.AIRHeader.sOFFID2     // STP 1 Office Subdivision identifier (Char 2)
-        Move (saRecordFields[15]) to AmadeusAIR.AIRHeader.sCPNID2     // Coupon Identifier (for a detailed description see A02-3277 Satellite Ticket Printing) (Char 15)
-        Move (saRecordFields[16]) to AmadeusAIR.AIRHeader.sIDENTT3    // Amadeus office ID of STP Site 2 For more information see Amadeus Office Identification (a-02-3204-AMD) (Char 9)
-        Move (saRecordFields[17]) to AmadeusAIR.AIRHeader.sTKTAGCY3   // IATA Number of STP Site 2 (Char 8)
-        Move (saRecordFields[18]) to AmadeusAIR.AIRHeader.sOFFID3     // STP 2 Office Subdivision identifier (Char 2)
-        Move (saRecordFields[19]) to AmadeusAIR.AIRHeader.sCPNID3     // Coupon Identifier (for a detailed description see A02-3277 Satellite Ticket Printing) (Char 15)
-        Move (saRecordFields[20]) to AmadeusAIR.AIRHeader.sIDENTT4    // Amadeus office ID of STP Site 3 For more information see Amadeus Office Identification (a-02-3204-AMD) (Char 9)
-        Move (saRecordFields[21]) to AmadeusAIR.AIRHeader.sTKTAGCY4   // IATA Number of STP Site 3 (Char 8)
-        Move (saRecordFields[22]) to AmadeusAIR.AIRHeader.sOFFID4     // STP 3 Office Subdivision identifier (Char 2)
-        Move (saRecordFields[23]) to AmadeusAIR.AIRHeader.sCPNID4     // Coupon Identifier (for a detailed description see A02-3277 Satellite Ticket Printing) (Char 15)
-        Move (saRecordFields[24]) to AmadeusAIR.AIRHeader.sIDENTT5    // Amadeus office ID of STP Site 4 For more information see Amadeus Office Identification (a-02-3204-AMD) (Char 9)
-        Move (saRecordFields[25]) to AmadeusAIR.AIRHeader.sTKTAGCY5   // IATA Number of STP Site 4 (Char 8)
-        Move (saRecordFields[26]) to AmadeusAIR.AIRHeader.sOFFID5     // STP 4 Office Subdivision identifier (Char 2)
-        Move (saRecordFields[27]) to AmadeusAIR.AIRHeader.sCPNID5     // Coupon Identifier (for a detailed description see A02-3277 Satellite Ticket Printing) (Char 15)
-        Move (saRecordFields[28]) to AmadeusAIR.AIRHeader.sACCTNUM    // Agency Client Account Number (Char 10)
-        Move (saRecordFields[29]) to AmadeusAIR.AIRHeader.sORDNUM     // Order Number (Char 10)
+        Move (NullIfBlank(Mid(saRecordFields[00], 06, 07))) to AmadeusAIR.AIRHeader.sRECLOC     // Record locator of PNR in GC (If temporary ticketing PNR then constant value of 'NOPNR') (Char 6)
+        Move (NullIfBlank(Mid(saRecordFields[00], 03, 13))) to AmadeusAIR.AIRHeader.sPNRENV     // PNR envelope Number (If temporary ticketing PNR, then constant value of 'blanks') (Num 3)
+        Move (NullIfBlank(Mid(saRecordFields[01], 02, 01))) to AmadeusAIR.AIRHeader.sTOTPSG     // Total Number of passengers in PNR (Num 2)
+        Move (NullIfBlank(Mid(saRecordFields[01], 02, 03))) to AmadeusAIR.AIRHeader.siAIRPSG    // Total Number of passengers in AIR (NB: Number of RPA lines for type ‘RA’) (Num 2)
+        Move (NullIfBlank(Mid(saRecordFields[01], 01, 05))) to AmadeusAIR.AIRHeader.sNHPNR      // Non Homogeneous PNR Indicator (N = Non Homogeneous PNR) (Char 1)
+        Move (NullIfBlank(saRecordFields[02]))              to AmadeusAIR.AIRHeader.sIDBKG      // Amadeus Office ID of booking agency.For a description of the Amadeus Office Id please see Amadeus Office Identification (a-02-3204-AMD) (Char 9)
+        Move (NullIfBlank(saRecordFields[03]))              to AmadeusAIR.AIRHeader.sBKGAGCY    // IATA Number of booking agency (Char 8)
+        Move (NullIfBlank(saRecordFields[04]))              to AmadeusAIR.AIRHeader.sIDFIRST    // Amadeus Office ID of PNR first Owner. For a description of the Amadeus Office Id please see Amadeus Office Identification (A02OFP3204) (Char 9)
+        Move (NullIfBlank(saRecordFields[05]))              to AmadeusAIR.AIRHeader.sOWNAGY     // IATA Number of PNR first owner (Char 8)
+        Move (NullIfBlank(saRecordFields[06]))              to AmadeusAIR.AIRHeader.sIDENTCO    // Amadeus Office ID of current owner of PNR.For a description of the Amadeus Office Id please see Amadeus Office Identification (a-02-3204-AMD) (Char 9)
+        Move (NullIfBlank(saRecordFields[07]))              to AmadeusAIR.AIRHeader.sCURAGCY    // IATA Number of current agency (Char 8)
+        Move (NullIfBlank(saRecordFields[08]))              to AmadeusAIR.AIRHeader.sIDENTT     // Amadeus office ID of the ticketing agency. For more information see Amadeus Office Identification (a-02-3204-AMD) (Char 9)
+        Move (NullIfBlank(saRecordFields[09]))              to AmadeusAIR.AIRHeader.sTKTAGCY    // IATA Number of Ticketing Agency (Char 8)
+        Move (NullIfBlank(saRecordFields[10]))              to AmadeusAIR.AIRHeader.sOFFID      // Office Subdivision identifier (Char 2)
+        Move (NullIfBlank(saRecordFields[11]))              to AmadeusAIR.AIRHeader.sCPNID      // Coupon Identifier (for a detailed description see A02-3277 Satellite Ticket Printing) (Char 15)
+        Move (NullIfBlank(saRecordFields[12]))              to AmadeusAIR.AIRHeader.sIDENTT2    // Amadeus office ID of STP Site 1 For more information see Amadeus Office Identification (a-02-3204-AMD) (Char 9)
+        Move (NullIfBlank(saRecordFields[13]))              to AmadeusAIR.AIRHeader.sTKTAGCY2   // IATA Number of STP Site 1 (Char 8)
+        Move (NullIfBlank(saRecordFields[14]))              to AmadeusAIR.AIRHeader.sOFFID2     // STP 1 Office Subdivision identifier (Char 2)
+        Move (NullIfBlank(saRecordFields[15]))              to AmadeusAIR.AIRHeader.sCPNID2     // Coupon Identifier (for a detailed description see A02-3277 Satellite Ticket Printing) (Char 15)
+        Move (NullIfBlank(saRecordFields[16]))              to AmadeusAIR.AIRHeader.sIDENTT3    // Amadeus office ID of STP Site 2 For more information see Amadeus Office Identification (a-02-3204-AMD) (Char 9)
+        Move (NullIfBlank(saRecordFields[17]))              to AmadeusAIR.AIRHeader.sTKTAGCY3   // IATA Number of STP Site 2 (Char 8)
+        Move (NullIfBlank(saRecordFields[18]))              to AmadeusAIR.AIRHeader.sOFFID3     // STP 2 Office Subdivision identifier (Char 2)
+        Move (NullIfBlank(saRecordFields[19]))              to AmadeusAIR.AIRHeader.sCPNID3     // Coupon Identifier (for a detailed description see A02-3277 Satellite Ticket Printing) (Char 15)
+        Move (NullIfBlank(saRecordFields[20]))              to AmadeusAIR.AIRHeader.sIDENTT4    // Amadeus office ID of STP Site 3 For more information see Amadeus Office Identification (a-02-3204-AMD) (Char 9)
+        Move (NullIfBlank(saRecordFields[21]))              to AmadeusAIR.AIRHeader.sTKTAGCY4   // IATA Number of STP Site 3 (Char 8)
+        Move (NullIfBlank(saRecordFields[22]))              to AmadeusAIR.AIRHeader.sOFFID4     // STP 3 Office Subdivision identifier (Char 2)
+        Move (NullIfBlank(saRecordFields[23]))              to AmadeusAIR.AIRHeader.sCPNID4     // Coupon Identifier (for a detailed description see A02-3277 Satellite Ticket Printing) (Char 15)
+        Move (NullIfBlank(saRecordFields[24]))              to AmadeusAIR.AIRHeader.sIDENTT5    // Amadeus office ID of STP Site 4 For more information see Amadeus Office Identification (a-02-3204-AMD) (Char 9)
+        Move (NullIfBlank(saRecordFields[25]))              to AmadeusAIR.AIRHeader.sTKTAGCY5   // IATA Number of STP Site 4 (Char 8)
+        Move (NullIfBlank(saRecordFields[26]))              to AmadeusAIR.AIRHeader.sOFFID5     // STP 4 Office Subdivision identifier (Char 2)
+        Move (NullIfBlank(saRecordFields[27]))              to AmadeusAIR.AIRHeader.sCPNID5     // Coupon Identifier (for a detailed description see A02-3277 Satellite Ticket Printing) (Char 15)
+        Move (NullIfBlank(saRecordFields[28]))              to AmadeusAIR.AIRHeader.sACCTNUM    // Agency Client Account Number (Char 10)
+        Move (NullIfBlank(saRecordFields[29]))              to AmadeusAIR.AIRHeader.sORDNUM     // Order Number (Char 10)
 //        Move (saRecordFields[30]) to AmadeusAIR.AIRHeader.sERSP       // ERSP of booking agency (Num 8)
-        Move (Mid(saRecordFields[30], 03, 01)) to AmadeusAIR.AIRHeader.sNSAIR      // National System Airline Code (Char 3)
-        Move (Mid(saRecordFields[30], 07, 04)) to AmadeusAIR.AIRHeader.sNSRECLOC   // National System PNR record locator (Char 7)
+        // ToDo: Augment to have an array of possible National System code and locator sets
+        // Only store the first set of possible multiple sets
+        For iRow from 30 to (SizeOfArray(saRecordFields) - 1) // 1 or more NSPNR sets. Always at least 1 that may be blank
+            Move (SizeOfArray(AmadeusAIR.AIRHeader.taNSPNRs)) to iPtr
+            Move (NullIfBlank(Mid(saRecordFields[iRow], 03, 01))) to AmadeusAIR.AIRHeader.taNSPNRs[iPtr].sNSAIR      // National System Airline Code (Char 3)
+            Move (NullIfBlank(Mid(saRecordFields[iRow], 07, 04))) to AmadeusAIR.AIRHeader.taNSPNRs[iPtr].sNSRECLOC   // National System PNR record locator (Char 7)
+        Loop
     End
     
     Function_Return (bSuccess)
 End_Function
 
-Function LocateAIRSection Global String[] sInputRecord String sMatchValue Returns Integer
+Function LocateAIRSection Global String[] sInputRecord String sMatchValue Integer iStartPosition Returns Integer
     Integer iRtnVal iRow iMax iMatchLength
 
     Move (-1) to iRtnVal
     Move (Length(sMatchValue)) to iMatchLength
     Move (SizeOfArray(sInputRecord)) to iMax
-    For iRow from 0 to (iMax - 1)
+    For iRow from iStartPosition to (iMax - 1)
         If (Left(sInputRecord[iRow], iMatchLength) = sMatchValue) Begin
             Move iRow to iRtnVal
-            Break // out of loop
+            Move iMax to iRow // break out of loop
         End
     Loop
     Function_Return iRtnVal // A -1 will mean it was not found since it is zero indexed into the array
@@ -191,21 +207,39 @@ Function ParseAmadeusAIR Global String[] sInputRecord Returns tAmadeusAIR
     String[] sBLKHeader
     String[] sAIRHeader
     String[] sItinerary
-    String[][] saInvoice
+    String[][] saInvoices
     String[] sFooter
-    Integer iRow iMax
-    Integer iBLKHeaderPtr iAIRHeaderPtr iItineraryPtr iInvoicePtr iFooterPtr
+    Integer iRow iMax iPtr
+    Integer iBLKHeaderPtr iAIRHeaderPtr iItineraryPtr iFooterPtr
+    Integer[] iaInvoicePtrs
     Boolean bSuccess
     
     // Scan the line based text record to identify the main parts of an AIR.
     // Block header, AIR Header, Itinerary, Invoice (possibly multiple sets), footer
-    Move (LocateAIRSection(sInputRecord, "AIR-BLK")) to iBLKHeaderPtr
-    Move (LocateAIRSection(sInputRecord, "AMD")) to iAIRHeaderPtr
-    Move (LocateAIRSection(sInputRecord, "A-")) to iItineraryPtr
+    Move (LocateAIRSection(sInputRecord, "AIR-BLK", 00)) to iBLKHeaderPtr
+    Move (LocateAIRSection(sInputRecord, "AMD", 01)) to iAIRHeaderPtr
+    Move (LocateAIRSection(sInputRecord, "A-", iAIRHeaderPtr)) to iItineraryPtr
     If (iItineraryPtr < 0) ;
-        Move (LocateAIRSection(sInputRecord, "B-")) to iItineraryPtr // May be missing the 'A-' so try 'B-'
+        Move (LocateAIRSection(sInputRecord, "B-", iAIRHeaderPtr)) to iItineraryPtr // May be missing the 'A-' so try 'B-'
     If (iItineraryPtr < 0) ;
-        Move (LocateAIRSection(sInputRecord, "I-")) to iItineraryPtr // May be missing the 'A-' and 'B-' so try 'I-' (MA type void records)
+        Move (LocateAIRSection(sInputRecord, "I-", iAIRHeaderPtr)) to iItineraryPtr // May be missing the 'A-' and 'B-' so try 'I-' (MA type void records)
+
+    // Scan for possible multiple invoice sections. Starting with 'I-' ending with the next 'I-' or end of record
+    Move (SizeOfArray(sInputRecord)) to iMax
+    For iRow from iItineraryPtr to (iMax - 1)
+        Move (LocateAIRSection(sInputRecord, "I-", iRow)) to iPtr // Returns -1 on fail
+        If (iPtr >= 0) Begin
+            Move iPtr to iaInvoicePtrs[-1]
+            Move iPtr to iRow // Jump to next possible 'I-' record
+        End
+    Loop
+
+    Move (LocateAIRSection(sInputRecord, "AIT", iaInvoicePtrs[0])) to iFooterPtr
+    If (iFooterPtr < 0) ;
+        Move (LocateAIRSection(sInputRecord, "ENDX", iaInvoicePtrs[0])) to iFooterPtr
+    If (iFooterPtr < 0) ; // Last resort on a poorly terminated input record
+        Move (SizeOfArray(sInputRecord)) to iFooterPtr
+
 
     // Move only those sections into the subrecord arrays
     If (iBLKHeaderPtr > -1) Begin
@@ -220,6 +254,21 @@ Function ParseAmadeusAIR Global String[] sInputRecord Returns tAmadeusAIR
         Loop
     End
 
+    // Process the set of invoice record subsets
+    For iRow from 0 to (SizeOfArray(iaInvoicePtrs) - 1)
+        // Determine the end of each subset of invoice data records
+        If (iRow < (SizeOfArray(iaInvoicePtrs) - 1)) ; // Not the next to last record
+            Move (iaInvoicePtrs[iRow + 1]) to iMax // get the end of the list from the start of the next
+        Else ;
+            Move (iFooterPtr) to iMax // On the last record get the end from the start of the footer
+        // Pull in each susbset of invoice records
+        For iPtr from iaInvoicePtrs[iRow] to (iMax - 1)
+            Move sInputRecord[iPtr] to saInvoices[iRow][-1]
+        Loop
+    Loop
+
+
+    // Parse each subset of records
     Move (ParseBLKHeader(sBLKHeader, &AmadeusAIR)) to bSuccess
     Move (ParseAIRHeader(sAIRHeader, &AmadeusAIR)) to bSuccess
     

@@ -103,6 +103,13 @@ Object oMainProcess is a dbView
         Get Create (RefClass(cJsonObject)) to hoJson
         Set peWhiteSpace of hoJson to jpWhitespace_Pretty // jpWhitespace_Spaced option?
         Send DataTypeToJson of hoJson tRecord
+
+        If (Checked_State(oSparseJsonCb)) Begin
+            // Remove 'null' members here including empty arrays
+            Send RemoveNullJSONMembers hoJson 0 0 0
+//            Send StripEmptyMembers hoJson
+        End
+
         Get Stringify of hoJson to sResult
         Send Destroy of hoJson
         Function_Return sResult
@@ -550,6 +557,12 @@ Object oMainProcess is a dbView
                 Set Label to "Activate Log File"
             End_Object
 
+            Object oSparseJsonCb is a CheckBox
+                Set Location to 43 45
+                Set Size to 10 50
+                Set Label to "Sparse JSON format"
+            End_Object
+
         End_Object
 
     End_Object
@@ -572,6 +585,7 @@ Object oMainProcess is a dbView
         Set Value of oInputFileNameForm to sTempStr
 
         Set Checked_State of oLogFileCb to (ReadBoolean(oScannerIniFile, "GENERAL", "ActivateLogFile", False))
+        Set Checked_State of oSparseJsonCb to (ReadBoolean(oScannerIniFile, "GENERAL", "SparseJSON", True))
 
     End_Procedure
 
@@ -580,6 +594,7 @@ Object oMainProcess is a dbView
         Send WriteString  of oScannerIniFile "GENERAL" "DefaultDataFolder" (ExtractFilePath(Value(oInputFileNameForm)))
         Send WriteString  of oScannerIniFile "GENERAL" "LogFolder" (psLogFolder(oMainProcess))
         Send WriteBoolean of oScannerIniFile "GENERAL" "ActivateLogFile" (Checked_State(oLogFileCb))
+        Send WriteBoolean of oScannerIniFile "GENERAL" "SparseJSON" (Checked_State(oSparseJsonCb))
     End_Procedure
 
     Procedure Activate

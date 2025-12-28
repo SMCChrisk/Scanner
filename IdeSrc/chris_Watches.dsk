@@ -1,3 +1,4 @@
 [Scanner.src]
 0="(sBlock)"
 1="(iHoldPosition)"
+2="(JsonValue(hoMember))"

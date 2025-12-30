@@ -1,0 +1,69 @@
+﻿Use cJsonObject.pkg
+
+Class cSparseJsonObject is a cJsonObject
+    
+    Procedure Construct_Object
+        Forward Send Construct_Object
+
+    End_Procedure
+
+    Procedure End_Construct_Object
+        Forward Send End_Construct_Object
+
+    End_Procedure
+
+    // Created by Gemini AI 12/28/2025
+    // Recursive helper to clean the object
+    { Visibility=Private }
+    Procedure DoStripEmptyMembers Handle hoJson Boolean bCollapseArrays
+        Integer iCount iIndex eType eMemberType
+        Handle hoMember
+        String sValue sKeyName
+        Boolean bRemove
+
+        Get MemberCount of hoJson to iCount
+        Get JsonType of hoJson to eType
+        
+        Move (iCount - 1) to iIndex
+        While (iIndex >= 0)
+            Get MemberByIndex of hoJson iIndex to hoMember
+            Get JsonType of hoMember to eMemberType
+            Move False to bRemove
+            
+            If (eMemberType = jsonTypeObject or eMemberType = jsonTypeArray) Begin
+                Send DoStripEmptyMembers hoMember bCollapseArrays
+                If (MemberCount(hoMember) = 0) Move True to bRemove
+            End
+            Else Begin
+                If (eMemberType = jsonTypeNull) Move True to bRemove
+                If (eMemberType = jsonTypeString) Begin
+                    Get JsonValue of hoMember to sValue
+                    If (Trim(sValue) = "" or sValue = "null") Move True to bRemove // Allow for altered way to use this
+                End
+            End
+
+            If (bRemove) Begin
+                If (eType = jsonTypeArray) Begin
+                    If (bCollapseArrays) Send RemoveMember of hoJson iIndex
+                End
+                Else Begin
+                    // OBJECT REMOVAL: Must use the Key Name
+                    Get MemberNameByIndex of hoJson iIndex to sKeyName
+                    Send RemoveMember of hoJson sKeyName
+                End
+            End
+            
+            Send Destroy of hoMember
+            Decrement iIndex
+        Loop
+    End_Procedure
+	
+    // Public Function to get the Sparse String
+    Function SparseStringify Boolean bCollapseArrays Returns String
+        String sResult
+        Send DoStripEmptyMembers Self bCollapseArrays
+        Get Stringify to sResult
+        Function_Return sResult
+    End_Function
+
+End_Class

@@ -3,6 +3,7 @@ Use DFClient.pkg
 Use File_dlg.pkg
 Use seq_chnl.pkg
 Use cJsonObject.pkg
+Use cSparseJsonObject.pkg
 Use cSelectFolderDialog.pkg
 
 Use SectorFunctions.pkg
@@ -100,17 +101,34 @@ Object oMainProcess is a dbView
         Handle hoJson
         String sResult
         
-        Get Create (RefClass(cJsonObject)) to hoJson
-        Set peWhiteSpace of hoJson to jpWhitespace_Pretty // jpWhitespace_Spaced option?
-        Send DataTypeToJson of hoJson tRecord
-
         If (Checked_State(oSparseJsonCb)) Begin
-            // Remove 'null' members here including empty arrays
-            Send RemoveNullJSONMembers hoJson 0 0 0
-//            Send StripEmptyMembers hoJson
+            // Use the special spare json object created with help from Gemini AI.
+            // This will supress output of 'null' fields which are empty strings. Integer 0 can be added to the logic.
+            Get Create (RefClass(cSparseJsonObject)) to hoJson
+            Set peWhiteSpace of hoJson to jpWhitespace_Pretty // jpWhitespace_Spaced option?
+            Send DataTypeToJson of hoJson tRecord
+            Get SparseStringify of hoJson True to sResult // 'True' here will supress the entire empty array
+        End
+        Else Begin
+            Get Create (RefClass(cJsonObject)) to hoJson // Standard json object
+            Set peWhiteSpace of hoJson to jpWhitespace_Pretty // jpWhitespace_Spaced option?
+            Send DataTypeToJson of hoJson tRecord
+            Get Stringify of hoJson to sResult
         End
 
-        Get Stringify of hoJson to sResult
+// Old way using my own routines
+//        Get Create (RefClass(cJsonObject)) to hoJson
+//        Set peWhiteSpace of hoJson to jpWhitespace_Pretty // jpWhitespace_Spaced option?
+//        Send DataTypeToJson of hoJson tRecord
+//
+//        If (Checked_State(oSparseJsonCb)) Begin
+//            // Remove 'null' members here including empty arrays
+//            Send RemoveNullJSONMembers hoJson 0 0 0
+////            Send StripEmptyMembers hoJson
+//        End
+
+//        Get Stringify of hoJson to sResult
+
         Send Destroy of hoJson
         Function_Return sResult
     End_Function
@@ -488,13 +506,20 @@ Object oMainProcess is a dbView
                         Move (RemoveExtensionFromFile(sOutputFileName)) to sOutputFileName
                         Move (String(sOutputFileName) - ".json") to sOutputFileName
                         Move (String(sFilePath) - String(sOutputFileName)) to sOutputFileName
+
                         // Open the file
                         Move (Seq_New_Channel()) to iChannel
-                        If (iRow = 0) ;
+                        If (iRow = 0) Begin
                             Direct_Output channel iChannel sOutputFileName
-                        Else ;
+                            If (iMax > 1) ; // Multiple record file
+                                Write '[' // On multiple record process, need to start an array root element
+                        End
+                        Else Begin
                             Append_Output channel iChannel sOutputFileName
-                        
+                            If (iMax > 1) ; // Multiple record file
+                                Write ',' // Sparator between records
+                        End
+
                         // Output the record
 //                        For iRecPtr from 0 to (SizeOfArray(saRecordLines) - 1)
 //                            Writeln channel iChannel saRecordLines[iRecPtr] // Output text version
@@ -502,6 +527,9 @@ Object oMainProcess is a dbView
 
                         Move (GenerateAmadeusJson(Self, AmadeusAIR)) to sAmadeusJSON // Convert struct to json text
                         Writeln sAmadeusJSON
+
+                        If (iMax > 1 and iRow = (iMax - 1)) ; // Multiple record file and finshed the last record
+                            Writeln ']' // Terminate the root array
 
                         Close_Output iChannel
                         Send Seq_Release_Channel iChannel

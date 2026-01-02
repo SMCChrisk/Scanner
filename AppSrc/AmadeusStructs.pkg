@@ -1,0 +1,253 @@
+﻿// Amadeus specific structures
+
+Struct tSEGASS // Segment Association
+//    String  SEGNBR   // Segment Number (Num 3)
+    String  SegAssValue // For now we will just store the string
+End_Struct
+
+Struct tPSGASS // Passenger Association
+//    String  PSGNBR   // Segment Number (Num 3)
+    String  PsgAssValue // For now we will just store the string
+End_Struct
+
+Struct tBLKMessageHeader // Block Message Header Segment
+    String  AIRVER // AIR version Number: Valid versions:204, 205, 206, 207 (char 3)
+    String  AIROPT // AIR option Number
+    String  TRANNUM // Transmission Number
+    String  NETID // Network Identifier (2 char)
+    String  ADDR  // Identifier of terminal generating AIR (8 char)
+    String  BLKNUM // Block Number transmitted (char 3)
+    String  TOTBLK // Total Number of blocks containing AIR (char 3)
+End_Struct
+
+Struct tNSPNR // National System PNR
+    String  NSAIR      // National System Airline Code (Char 3)
+    String  NSRECLOC   // National System PNR record locator (Char 7)
+End_Struct
+
+Struct tAIRHeader // AMD - AIR Record Header
+    String  MSGTAG   // Message Tag (AMD) (char 3)
+    String  RETRANS  // Retransmitted Record Indicator (R=Retransmitted, blanks If not used) (char 1)
+    String  DOM      // Day of month numeric (Num 2)
+    String  AIRSEQ   // AIR sequence Number (Num 8)
+    Integer AIRSEC   // AIR section Number (Num 1..2) has '/' terminator between fields
+    Integer AIRTOTAL // AIR Total Number (Num 1..2) 
+    String  ACTTAG   // Action tag (Constant value of 'VOID' or ‘RSTD’ or ‘TRFX’ or blanks) (char 4)
+    String  Date     // Date when voided (DDMMM) (char 5)
+    String  AGTSIN   // Agent Sign that voided AIR (Sine = Initials and Duty Code) (system void = "****") (char 4)
+    // CR
+    String  NETID      // The network identifier (Char 2)
+    String  ADDRTKT    // Identifier of the terminal requesting the ticket (Num 8)
+    String  NETIDBOS   // The network identifier (for back offices purposes) (Char 2)
+    Integer ADDRTKTBOS // The identifier of the terminal activating the a.I.R. (for back offices purposes) (Num 8)
+    String  IDENTBOS   // Back Office a.I.R. destination office (Char 9)
+    String  BOSTYPE    // a.I.R. destination type: BOS type as to list defined in A02AIRT4. (Char 3)
+    // CR
+    String  RECLOC     // Record locator of PNR in GC (If temporary ticketing PNR then constant value of 'NOPNR') (Char 6)
+    String  PNRENV     // PNR envelope Number (If temporary ticketing PNR, then constant value of 'blanks') (Num 3)
+    String  TOTPSG     // Total Number of passengers in PNR (Num 2)
+    String  iAIRPSG    // Total Number of passengers in AIR (NB: Number of RPA lines for type ‘RA’) (Num 2)
+    String  NHPNR      // Non Homogeneous PNR Indicator (N = Non Homogeneous PNR) (Char 1)
+    String  IDBKG      // Amadeus Office ID of booking agency.For a description of the Amadeus Office Id please see Amadeus Office Identification (a-02-3204-AMD) (Char 9)
+    String  BKGAGCY    // IATA Number of booking agency (Char 8)
+    String  IDFIRST    // Amadeus Office ID of PNR first Owner. For a description of the Amadeus Office Id please see Amadeus Office Identification (A02OFP3204) (Char 9)
+    String  OWNAGY     // IATA Number of PNR first owner (Char 8)
+    String  IDENTCO    // Amadeus Office ID of current owner of PNR.For a description of the Amadeus Office Id please see Amadeus Office Identification (a-02-3204-AMD) (Char 9)
+    String  CURAGCY    // IATA Number of current agency (Char 8)
+    String  IDENTT     // Amadeus office ID of the ticketing agency. For more information see Amadeus Office Identification (a-02-3204-AMD) (Char 9)
+    String  TKTAGCY    // IATA Number of Ticketing Agency (Char 8)
+    String  OFFID      // Office Subdivision identifier (Char 2)
+    String  CPNID      // Coupon Identifier (for a detailed description see A02-3277 Satellite Ticket Printing) (Char 15)
+    String  IDENTT2    // Amadeus office ID of STP Site 1 For more information see Amadeus Office Identification (a-02-3204-AMD) (Char 9)
+    String  TKTAGCY2   // IATA Number of STP Site 1 (Char 8)
+    String  OFFID2     // STP 1 Office Subdivision identifier (Char 2)
+    String  CPNID2     // Coupon Identifier (for a detailed description see A02-3277 Satellite Ticket Printing) (Char 15)
+    String  IDENTT3    // Amadeus office ID of STP Site 2 For more information see Amadeus Office Identification (a-02-3204-AMD) (Char 9)
+    String  TKTAGCY3   // IATA Number of STP Site 2 (Char 8)
+    String  OFFID3     // STP 2 Office Subdivision identifier (Char 2)
+    String  CPNID3     // Coupon Identifier (for a detailed description see A02-3277 Satellite Ticket Printing) (Char 15)
+    String  IDENTT4    // Amadeus office ID of STP Site 3 For more information see Amadeus Office Identification (a-02-3204-AMD) (Char 9)
+    String  TKTAGCY4   // IATA Number of STP Site 3 (Char 8)
+    String  OFFID4     // STP 3 Office Subdivision identifier (Char 2)
+    String  CPNID4     // Coupon Identifier (for a detailed description see A02-3277 Satellite Ticket Printing) (Char 15)
+    String  IDENTT5    // Amadeus office ID of STP Site 4 For more information see Amadeus Office Identification (a-02-3204-AMD) (Char 9)
+    String  TKTAGCY5   // IATA Number of STP Site 4 (Char 8)
+    String  OFFID5     // STP 4 Office Subdivision identifier (Char 2)
+    String  CPNID5     // Coupon Identifier (for a detailed description see A02-3277 Satellite Ticket Printing) (Char 15)
+    String  ACCTNUM    // Agency Client Account Number (Char 10)
+    String  ORDNUM     // Order Number (Char 10)
+    String  ERSP       // ERSP of booking agency (Num 8)
+    tNSPNR[]  NSPNR    // National System PNR. (Char 28?)
+End_Struct
+
+Struct tAITAccountingInfoRemark // AIT Accounting Information Remark
+    String  AITAN       // Account Number Indicator (Constant value of 'AN')
+    String  ANNUM       // Account Number (Char 10)
+    String  AITCC       // Cost Centre Indicator (Constant value of 'CC') (Char 2)
+    String  CCNUM       // Cost Centre Number (Char 60)
+    String  AITIC       // IATA Customer Indicator (Constant value of 'IC') (Char 2)
+    String  ICNUM       // IATA customer Number (Char 12)
+    String  AITCR       // Client Reference Indicator (Constant value of 'CR') (Char 2)
+    String  CRNUM       // Client Reference (Char 60)
+    tSEGASS SEGASS
+    tPSGASS PSGASS
+End_Struct
+
+Struct tValidatingCarrier
+    String TKTAIR  // Ticketing Airline Name (Char 24)
+    String ALCDE   // Airline Code (Char 3)
+    String NUMCDE  // Airline Numeric Code (including check digit) or UIC Code (Char 4)
+    String TKTMOD  // Ticketing Issuance Mode (empty for CTS standard, LCC for low-cost, CNS for consolidator) (Char 3)
+End_Struct
+
+Struct tTicketingInput // A string of entries may be present in the Line Item each separated by a slash (/).
+    String ENTRY   // Ticketing or back office input command entry (Char 100)
+End_Struct
+
+Struct tServicingCarrier
+    String SVCCAR  // Code of Servicing Carrier (Char 4)
+    String TKTIND  // Ticketing Indicator Ticket issued by: 1. '/' = servicing carrier 2. 'X' = third party vendor (Char 1)
+    // Delimiter (Constant value of blank)
+    String BKAGT   // PNR Creator Agent Sine (Sine = Four numerics + Initials and Duty Code) eg. 1234ABSU. (Char 8)
+    // Delimiter (Constant value of '-')
+    String TKTAGT  // Ticketing Agent Sine (Sine = Four numerics + Initials and Duty Code) eg. 1234ABSU (Char 8)
+    // Delimiter (Constant value of '-')
+    String PRCDE   // Pricing Code (Char 1)
+    // Delimiter (Constant value of '-')
+    String FCMI    // Fare Calculation Mode Indicator (Char 1)
+    // Delimiter (Constant value of '-')
+    String JRNYTYPE // Type of Journey 0=IATA 1=ATAF (within France Metropolitan) 2=ATAF Out of France (Char 1)
+    // Delimiter (Constant value of '-')
+    String JRNYCODE // Type of journey code I=International B=Bord a bord(Metro France-NCE/TLN/MRS- to Corsica) M=Metropolitan France to Corsica (except bord a bord) F=Metron France only (including Monaco to France Metro) (Char 1)
+    // Delimiter (Constant value of '-')
+    String PSURCHG  // ET/PT surcharge :E = electronic ticket mandatoryP = paper ticket only, ET disallowed Blank = no restriction (Char 1)
+End_Struct
+
+Struct tPNRDate 
+    String PNRDTE  // PNR Creation Date (YYMMDD) (Char 6)
+    String CHGDTE  // PNR Change Date (YYMMDD) (Char 6)
+    String AIRDTE  // AIR Creation Date (YYMMDD) (Char 6)
+End_Struct
+
+Struct tSalesIndicator // G-
+    String INTIND  // International and/or Self Sale Indicator (Constant value of ___, X__, _/S or X/S where _ = blank, X = international, S = Self sale) (Char 3)
+    String SALEIND // International Sales indicator (Constant value of SITI, SOTO, SOTI or SITO). (Char 4)
+    String ORGDEST // Origin/Destination of the itinerary (Char 6)
+    String DOMISO  // Conditional on INTIND (Char 2)
+                   // ISO Country Code of Domestic Transportation. on INTIND = 'blank' and on the true domestic transportation being within the borders of a single country.
+                   // ISO code EU on INTIND = X and transportation being within the borders of European Union.
+                   //          E1 on INTIND = X and transportation being within IATA Europe.
+End_Struct
+
+Struct tTicketedAirSegment // Ticketed Air Segment
+//    String MSGTAG	// M	an2	Message Tag (H-)
+    String TTONBR	// M	n3	Tattoo Number in the PNR
+    String SEGNBR	// M	n3	Segment Number in the PNR
+    String STOP  	// M	a1	Stopover Indicator	(X is no stopover permitted, O is stopover permitted)
+    String ORIGAIR	// M	an3..5	Origin Airport Code
+    String ORIGCTY	// M	an..17	Origin City Name plus Airport detail if applicable
+    String DESTAIR	// M	an3..5	Destination Airport Code
+    String DESTCTY	// M	an..17	Destination City Name plus Airport detail if applicable
+    String AIRCDE	// M	an6	Airline Code.
+    String FLTNBR	// M	an5	Flight Number.
+    String CLSSVC	// M	an2	Class of Service.
+    String CLSBKG	// M	an2	Class of Booking.
+    String DEPDTE	// M	an5	Departure Date (DDMMM)
+    String DEPTIM	// M	an5	Departure Time 24 Hour Clock HHMM	12 Hour Clock HHMMx Where x is: A=AM, P=PM, N=Noon, M=Midnight	
+    String ARRTIM	// M	an5 Arrival Time 24 Hour Clock HHMM 12 Hour Clock HHMMx Where x is: A=AM, P=PM, N=Noon, M=Midnight
+    String ARRDTE	// M	an5	Arrival Date (DDMMM)
+    String STATUS	// M	an4	Status Code and Number in Party
+    String PNRSTAT	// M	an4	PNR Status Code and Number in Party
+    String MEAL	    // O	an2	Meal Code
+    String NBRSTOP	// M	n1	Number of Stops
+    String EQUIP	// O	an3	Equipment Type
+    String ENTER	// O	an1	Entertainment Code
+    String SHRCOMM	// O	an..50	Shared Designator Commuter Airline Name
+    String BAGALL	// O	an3	Baggage Allowance
+    String CKINTRM	// O	an2	Check-In Terminal
+    String CKINTIM	// O	an5	Latest Check-In Time 24 Hour Clock HHMM 12 Hour Clock HHMMx Where X is: A=AM, P=PM, N=Noon, M=Midnight
+    String TKTT	    // O	a2	Electronic Ticket Segment Indicator (Value of 'ET')
+    String FLTDUR	// O	an5	Flight Duration Time
+    String NONSMOK	// O	an1	Flight Non-smoking Indicator
+    String MLTPM	// O	n2..5	Geographical Mileage from Inventory
+    String CPNNR	// O	n1..2	Real E-ticket coupon number in total set of tickets
+    String CPNIN	// O	n1..2	Real E-ticket coupon number in individual ticket
+    String CPNSN	// O	n1..2	E-ticket coupon sequence number
+    String CPNTSN	// O	n1..2	Total number of E-ticket coupons in sequence
+    String ORIGCNT	// M	a2	Origin country code
+    String DESTCNT	// M	a2	Destination country code
+    String ARRTRM	// O	an2	Arrival Terminal
+End_Struct
+
+Struct tTicketedSurfaceSegment // Ticketed Surface Segment Line (ARUNK VOID segment)
+//    String MSGTAG	// M	an2	Message Tag (H-)
+    String TTONBR	// M	n3	Tattoo Number in the PNR
+    String SEGNBR	// M	n3	Segment Number in the PNR
+    String STOP  	// M	a1	Stopover Indicator	(X is no stopover permitted, O is stopover permitted)
+    String ORIGAIR	// M	an3..5	Origin Airport Code
+    String ORIGCTY	// M	an..17	Origin City Name plus Airport detail if applicable
+    String DESTAIR	// M	an3..5	Destination Airport Code
+    String DESTCTY	// M	an..17	Destination City Name plus Airport detail if applicable
+    String HVOID	// M	a4 "VOID"
+    String ORIGCNT	// M	a2	Origin country code
+    String DESTCNT	// M	a2	Destination country code
+End_Struct
+
+Struct tTicketedOpenSegment // Ticketed Open Segment
+    String DATAFIELD
+End_Struct
+
+Struct tTicketedRailSegment // Ticketed Rail Segment
+    String DATAFIELD
+End_Struct
+
+Struct tOperationalFlightAirSegment // Operational Flight Air Segment
+    String TTONBR	// M	n3	Tattoo Number in the PNR
+    String SEGNBR	// M	n3	Segment Number in the PNR
+    String STOP  	// M	a1	Stopover Indicator	(X is no stopover permitted, O is stopover permitted)
+    String ORIGAIR	// M	an3..5	Origin Airport Code
+    String ORIGCTY	// M	an..17	Origin City Name plus Airport detail if applicable
+    String DESTAIR	// M	an3..5	Destination Airport Code
+    String DESTCTY	// M	an..17	Destination City Name plus Airport detail if applicable
+    String AIRCDE	// M	an6	Airline Code.
+    String FLTNBR	// M	an5	Flight Number.
+    String CLSSVC	// M	an2	Class of Service.
+    String CLSBKG	// M	an2	Class of Booking.
+    String DEPDTE	// M	an5	Departure Date (DDMMM)
+    String DEPTIM	// M	an5	Departure Time 24 Hour Clock HHMM	12 Hour Clock HHMMx Where x is: A=AM, P=PM, N=Noon, M=Midnight	
+    String ARRTIM	// M	an5 Arrival Time 24 Hour Clock HHMM 12 Hour Clock HHMMx Where x is: A=AM, P=PM, N=Noon, M=Midnight
+    String ARRDTE	// M	an5	Arrival Date (DDMMM)
+    String STATUS	// M	an4	Status Code and Number in Party
+    String PNRSTAT	// M	an4	PNR Status Code and Number in Party
+    String MEAL	    // O	an2	Meal Code
+    String NBRSTOP	// M	n1	Number of Stops
+    String EQUIP	// O	an3	Equipment Type
+    String ENTER	// O	an1	Entertainment Code
+    String SHRCOMM	// O	an..50	Shared Designator Commuter Airline Name
+    String BAGALL	// O	an3	Baggage Allowance
+    String CKINTRM	// O	an2	Check-In Terminal
+    String CKINTIM	// O	an5	Latest Check-In Time 24 Hour Clock HHMM 12 Hour Clock HHMMx Where X is: A=AM, P=PM, N=Noon, M=Midnight
+    String TKTT	    // O	a2	Electronic Ticket Segment Indicator (Value of 'ET')
+    String FLTDUR	// O	an5	Flight Duration Time
+    String NONSMOK	// O	an1	Flight Non-smoking Indicator
+    // Differs from the other Ticketed Segments at this point
+    String ARRTRM	// O	an2	Arrival Terminal
+End_Struct
+
+
+Struct tAmadeusAIR
+    tBLKMessageHeader         BLKMessageHeader
+    tAIRHeader                AIRHeader
+    tValidatingCarrier        ValidatingCarrier
+    tTicketingInput           TicketingInput
+    tServicingCarrier         ServicingCarrier
+    tPNRDate                  PNRDate
+    tSalesIndicator           SalesIndicator
+    tTicketedAirSegment[]     TicketedAirSegments
+    tTicketedSurfaceSegment[] TicketedSurfaceSegments
+    tTicketedOpenSegment[]    TicketedOpenSegments
+    tTicketedRailSegment[]    TicketedRailSegments
+
+    tAITAccountingInfoRemark AITAccountingInfoRemark // This may need to be an array. No examples found yet.
+End_Struct
+
